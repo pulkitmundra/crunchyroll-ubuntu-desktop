@@ -51,7 +51,7 @@ The upstream project was built purely for TV remote / gamepad / arrow-key naviga
 ## Repository Structure
 
 ```text
-crunchyroll-linux/
+crunchyroll-ubuntu-desktop/
 ├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen IPC)
 ├── preload.js                    # Electron preload bridge (pointer/hover telemetry & window IPC)
 ├── index.html                    # Outer Electron shell
@@ -85,8 +85,8 @@ Because Crunchyroll streams are encrypted with **Google Widevine DRM**, standard
 Clone this repository and run `install.sh`:
 
 ```bash
-git clone https://github.com/pulkitmundra/crunchyroll-linux.git ~/Desktop/prsnl/crunchyroll-linux
-cd ~/Desktop/prsnl/crunchyroll-linux
+git clone https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop.git ~/Desktop/prsnl/crunchyroll-ubuntu-desktop
+cd ~/Desktop/prsnl/crunchyroll-ubuntu-desktop
 chmod +x install.sh
 ./install.sh
 ```
@@ -94,7 +94,7 @@ chmod +x install.sh
 What `install.sh` does automatically:
 1. Downloads the v1.1.6 AppImage containing the **Castlabs Electron + Widevine** runtime to `~/.local/opt/crunchyroll/Crunchyroll.AppImage` (if not already present).
 2. Extracts the runtime into `~/.local/opt/crunchyroll/unpacked/`.
-3. Removes the stock `resources/app.asar` bundle and links `~/.local/opt/crunchyroll/unpacked/resources/app` -> this repository (`~/Desktop/prsnl/crunchyroll-linux`).
+3. Removes the stock `resources/app.asar` bundle and links `~/.local/opt/crunchyroll/unpacked/resources/app` -> this repository (`~/Desktop/prsnl/crunchyroll-ubuntu-desktop`).
    - **Live Editing**: Any change you make to `.js`, `.css`, or `.html` files in this repository takes effect immediately the next time you launch or reload (`Ctrl + R` / `F5`) the app!
 4. Symlinks `~/.local/bin/crunchyroll` -> `bin/crunchyroll` and installs the desktop entry in `~/.local/share/applications/crunchyroll-linux.desktop`.
 
@@ -125,8 +125,21 @@ What `install.sh` does automatically:
 
 ---
 
+## Contributing & Contact
+
+Issues, bug reports, and pull requests are welcome!
+
+- **Maintainer**: **Pulkit Mundra**
+- **Portfolio**: [pulkit-mundra-portfolio.vercel.app](https://pulkit-mundra-portfolio.vercel.app)
+- **GitHub**: [@pulkitmundra](https://github.com/pulkitmundra)
+- **LinkedIn**: [linkedin.com/in/pulkit-mundra](https://www.linkedin.com/in/pulkit-mundra/)
+- **Email**: [pmundra8@gmail.com](mailto:pmundra8@gmail.com)
+
+---
+
 ## Credits & License
 
 - Original Tizen frontend by [jhassan8/crunchyroll-tizen](https://github.com/jhassan8/crunchyroll-tizen)
 - Electron Linux wrapper by [aarron-lee/crunchyroll-linux](https://github.com/aarron-lee/crunchyroll-linux)
+- Desktop Mouse/Trackpad, Floating Dock & Smart Auto-PiP Edition by [Pulkit Mundra](https://github.com/pulkitmundra)
 - License: **ISC** (see `package.json`)

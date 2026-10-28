@@ -1,12 +1,12 @@
 {
   "name": "crunchyroll-linux",
   "version": "1.1.6",
-  "description": "Unofficial Linux HTPC Frontend for Crunchyroll",
-  "homepage": "https://github.com/aarron-lee/crunchyroll-linux",
+  "description": "Unofficial Ubuntu/Linux Desktop & HTPC Frontend for Crunchyroll with Mouse, Trackpad & Auto-PiP",
+  "homepage": "https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop",
   "main": "index.js",
-  "author": "aarron-lee",
+  "author": "Pulkit Mundra (fork of aarron-lee/crunchyroll-linux & jhassan8/crunchyroll-tizen)",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/aarron-lee/crunchyroll-linux/issues"
+    "url": "https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues"
   }
 }
