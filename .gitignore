@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.AppImage
+*.swp
+*~
+.DS_Store

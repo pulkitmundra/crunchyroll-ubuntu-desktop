@@ -1,0 +1,12 @@
+{
+  "name": "crunchyroll-linux",
+  "version": "1.1.6",
+  "description": "Unofficial Linux HTPC Frontend for Crunchyroll",
+  "homepage": "https://github.com/aarron-lee/crunchyroll-linux",
+  "main": "index.js",
+  "author": "aarron-lee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aarron-lee/crunchyroll-linux/issues"
+  }
+}
