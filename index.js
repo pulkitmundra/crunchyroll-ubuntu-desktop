@@ -385,7 +385,17 @@ function createWindow() {
 
   win.webContents.setUserAgent(userAgent);
 
-  win.loadFile(path.join(__dirname, "./index.html"), {
+  // Security lockdown: deny external popup windows and restrict top-level navigation to local index.html
+  const localIndexFile = path.join(__dirname, "./index.html");
+  const allowedFileUrlPrefix = `file://${localIndexFile}`;
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, targetUrl) => {
+    if (!targetUrl || !targetUrl.startsWith(allowedFileUrlPrefix)) {
+      event.preventDefault();
+    }
+  });
+
+  win.loadFile(localIndexFile, {
     userAgent,
   });
 
@@ -605,29 +615,45 @@ app.on("activate", () => {
   }
 });
 
+const ALLOWED_GAMEPAD_BUTTONS = new Set([
+  "bButton",
+  "aButton",
+  "dPadDown",
+  "dPadUp",
+  "dPadLeft",
+  "dPadRight",
+  "up",
+  "down",
+]);
+
 function handleGamepadButtonPress(mainWindow, buttonName) {
+  if (
+    !mainWindow ||
+    mainWindow.isDestroyed() ||
+    typeof buttonName !== "string" ||
+    !ALLOWED_GAMEPAD_BUTTONS.has(buttonName)
+  ) {
+    return;
+  }
   if (buttonName === "bButton") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "escape",
     });
     mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "escape" });
-  }
-  if (buttonName === "aButton") {
+  } else if (buttonName === "aButton") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "enter",
     });
     mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "space" });
-  }
-  if (buttonName === "dPadDown") {
+  } else if (buttonName === "dPadDown" || buttonName === "down") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "down",
     });
     mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "down" });
-  }
-  if (buttonName === "dPadUp") {
+  } else if (buttonName === "dPadUp" || buttonName === "up") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "up",
@@ -636,33 +662,17 @@ function handleGamepadButtonPress(mainWindow, buttonName) {
       type: "keyUp",
       keyCode: "up",
     });
-  }
-  if (buttonName == "dPadLeft") {
+  } else if (buttonName === "dPadLeft") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "left",
     });
     mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "left" });
-  }
-  if (buttonName == "dPadRight") {
+  } else if (buttonName === "dPadRight") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",
       keyCode: "right",
     });
     mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "right" });
-  }
-  if (buttonName == "up") {
-    mainWindow.webContents.sendInputEvent({
-      type: "keyDown",
-      keyCode: "up",
-    });
-    mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "up" });
-  }
-  if (buttonName == "down") {
-    mainWindow.webContents.sendInputEvent({
-      type: "keyDown",
-      keyCode: "down",
-    });
-    mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "down" });
   }
 }

@@ -6,6 +6,7 @@ RUNTIME_DIR="$HOME/.local/opt/crunchyroll"
 APPIMAGE_PATH="$RUNTIME_DIR/Crunchyroll.AppImage"
 UNPACKED_DIR="$RUNTIME_DIR/unpacked"
 APPIMAGE_URL="https://github.com/aarron-lee/crunchyroll-linux/releases/download/v1.1.6/Crunchyroll-Linux-1.1.6.AppImage"
+APPIMAGE_SHA256="ba06670fb21c8e5afa1d4241a4bf911fdbfd9b47bc1ed4d449e6d05645cccdfa"
 
 echo "=== Crunchyroll Linux Desktop Installer ==="
 
@@ -17,7 +18,13 @@ mkdir -p "$HOME/.local/share/applications"
 # 1. Download Castlabs Electron Widevine AppImage runtime if missing
 if [ ! -f "$APPIMAGE_PATH" ] && [ ! -d "$UNPACKED_DIR" ]; then
   echo "[*] Downloading Castlabs Electron Widevine runtime (Crunchyroll-Linux-1.1.6.AppImage)..."
-  curl -fL "$APPIMAGE_URL" -o "$APPIMAGE_PATH"
+  curl -fL --proto '=https' "$APPIMAGE_URL" -o "$APPIMAGE_PATH"
+  echo "[*] Verifying SHA-256 checksum..."
+  if ! echo "${APPIMAGE_SHA256}  ${APPIMAGE_PATH}" | sha256sum -c - >/dev/null 2>&1; then
+    echo "Error: SHA-256 checksum verification failed for $APPIMAGE_PATH" >&2
+    rm -f "$APPIMAGE_PATH"
+    exit 1
+  fi
   chmod +x "$APPIMAGE_PATH"
 fi
 

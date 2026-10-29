@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Crunchyroll
-Exec=__HOME__/.local/bin/crunchyroll %U
+Exec=__HOME__/.local/bin/crunchyroll
 Terminal=false
 Type=Application
 Icon=__HOME__/.local/share/icons/crunchyroll-linux.png

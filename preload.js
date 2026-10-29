@@ -59,6 +59,9 @@ contextBridge.exposeInMainWorld("electronUtilsRender", {
   toggleMiniPlayer: () => ipcRenderer.invoke("toggleMiniPlayer"),
   toggleAlwaysOnTop: () => ipcRenderer.invoke("toggleAlwaysOnTop"),
   toggleFullScreen: () => ipcRenderer.invoke("toggleFullScreen"),
-  onWindowModeChanged: (callback) =>
-    ipcRenderer.on("windowModeChanged", (_, state) => callback(state)),
+  onWindowModeChanged: (callback) => {
+    if (typeof callback === "function") {
+      ipcRenderer.on("windowModeChanged", (_, state) => callback(state));
+    }
+  },
 });

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 APPDIR="$HOME/.local/opt/crunchyroll/unpacked"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH:-}"
-exec "${APPDIR}/crunchyroll-linux" --no-sandbox --ozone-platform=x11 "$@"
+exec "${APPDIR}/crunchyroll-linux" --no-sandbox --ozone-platform=x11

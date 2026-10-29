@@ -8,7 +8,6 @@ window.session = {
     language: NaN,
     quality: "auto",
     account: {
-      password: NaN,
       username: NaN,
       avatar: "0001-cr-white-orange.png",
       premium: false,
@@ -60,6 +59,9 @@ window.session = {
       try {
         storage = JSON.parse(storage);
         session.storage = storage || session.storage;
+        if (session.storage && session.storage.account && "password" in session.storage.account) {
+          delete session.storage.account.password;
+        }
       } catch (error) {
         console.log("error parse session.");
       }
@@ -80,7 +82,9 @@ window.session = {
         );
         session.storage.id = response.account_id;
         session.storage.account.username = username;
-        session.storage.account.password = password;
+        if ("password" in session.storage.account) {
+          delete session.storage.account.password;
+        }
         session.storage.country = response.country;
         session.storage.token_type = response.token_type;
         session.storage.access_token = response.access_token;
@@ -274,7 +278,6 @@ window.session = {
       language: "en-US",
       quality: "auto",
       account: {
-        password: NaN,
         username: NaN,
         mature: NaN,
         avatar: "0001-cr-white-orange.png",

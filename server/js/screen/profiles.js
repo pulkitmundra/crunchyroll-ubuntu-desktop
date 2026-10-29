@@ -29,20 +29,34 @@ window.profilesScreen = {
     $("[id='profiles-screen']").remove();
   },
 
+  escapeHtml: function (str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  },
+
   getOptions: function () {
-    const profiles = session.storage.profiles;
+    const profiles = session.storage.profiles || [];
 
     return profiles.map((profile) => {
-      var is_selected = profile.is_selected;
-      var profile_name = profile.profile_name;
-      var profile_id = profile.profile_id;
-      var avatar = profile.avatar || "0001-cr-white-orange.png";
+      var is_selected = Boolean(profile.is_selected);
+      var profile_name = profilesScreen.escapeHtml(
+        String(profile.profile_name || "").trim().toUpperCase()
+      );
+      var profile_id = profilesScreen.escapeHtml(profile.profile_id || "");
+      var rawAvatar = String(profile.avatar || "0001-cr-white-orange.png");
+      var safeAvatar = /^[A-Za-z0-9._-]+$/.test(rawAvatar)
+        ? rawAvatar
+        : "0001-cr-white-orange.png";
 
       return `<li class="${
         is_selected ? "selected active" : ""
       }" id="${profile_id}">
-        <img src="https://static.crunchyroll.com/assets/avatar/170x170/${avatar}"/>
-        <span>${profile_name.trim().toUpperCase()}</span>
+        <img src="https://static.crunchyroll.com/assets/avatar/170x170/${safeAvatar}"/>
+        <span>${profile_name}</span>
       </li>`;
     });
   },
