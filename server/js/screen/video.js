@@ -193,8 +193,11 @@ window.video = {
   },
 
   keyDown: function (event) {
-    // Ignore modifier and window shortcut keys (Tab, Shift, Ctrl, Alt, Super, F9-F12)
-    if ([9, 16, 17, 18, 91, 92, 93, 120, 121, 122, 123].includes(event.keyCode)) {
+    // Ignore modifier and window shortcut keys (Tab, Shift, Ctrl, Alt, Super, F1-F12).
+    // XWayland can leave a function key "stuck" after a window resize and auto-repeat it
+    // every ~30ms, which would otherwise keep re-showing the OSD indefinitely.
+    var kc = event.keyCode;
+    if ([9, 16, 17, 18, 91, 92, 93].includes(kc) || (kc >= 112 && kc <= 123)) {
       return;
     }
     var osd = true;
@@ -378,6 +381,10 @@ window.video = {
           video.option = false;
           $("#setting-options").children().removeClass("selected");
         }
+        break;
+      default:
+        // Unknown / unhandled key: do not treat as activity (prevents stuck-key OSD wakeups)
+        osd = false;
         break;
     }
     !video.settings.open && !video.speed.state && osd && video.showOSD();

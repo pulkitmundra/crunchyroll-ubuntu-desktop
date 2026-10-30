@@ -2,6 +2,15 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v1.0.2] - 2026-10-30
+
+### Fixed
+- **Stuck Title & Bottom Bar After Resizing PiP Window on XWayland (`server/js/screen/video.js`):**
+  - Fixed a bug under GNOME Wayland / XWayland (`xwayland-keyboard`) where resizing the floating PiP window could leave a function key (`F4`, `keyCode: 115`) stuck in a synthetic auto-repeat `keydown` loop (`~30ms` interval) until another window was clicked.
+  - Updated `video.keyDown` to ignore all function keys `F1-F12` (`keyCode 112-123`) in addition to modifier keys, and added a `default: osd = false` branch so unhandled or stuck keys never reset `window.lastUserActivityAt` or wake up `#osd`.
+
+---
+
 ## [v1.0.1] - 2026-10-30
 
 ### Fixed
