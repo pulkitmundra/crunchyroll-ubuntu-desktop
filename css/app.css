@@ -119,17 +119,23 @@ body.show-floating-toolbar #dock-handle {
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-#top-center-dock:hover #floating-toolbar,
-#top-center-dock.expanded #floating-toolbar {
+body:not(.hide-cursor) #top-center-dock:hover #floating-toolbar,
+body:not(.hide-cursor) #top-center-dock.expanded #floating-toolbar {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
-#top-center-dock:hover #dock-handle,
-#top-center-dock.expanded #dock-handle {
+body:not(.hide-cursor) #top-center-dock:hover #dock-handle,
+body:not(.hide-cursor) #top-center-dock.expanded #dock-handle {
   opacity: 1;
   background: #f47521;
+}
+
+body.hide-cursor #top-center-dock #floating-toolbar,
+body.hide-cursor #top-center-dock #dock-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .floating-btn {

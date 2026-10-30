@@ -121,16 +121,21 @@ window.main = {
       main.state = keyboard.id;
       return main.state;
     }
+    if (typeof video !== "undefined" && document.getElementById(video.id)) {
+      if (typeof menu !== "undefined" && menu.isOpen) {
+        menu.isOpen = false;
+      }
+      main.state = video.id;
+      return main.state;
+    }
+    var menuEl = typeof menu !== "undefined" && document.getElementById(menu.id);
     if (
       typeof menu !== "undefined" &&
       menu.isOpen &&
-      document.getElementById(menu.id)
+      menuEl &&
+      menuEl.offsetParent !== null
     ) {
       main.state = menu.id;
-      return main.state;
-    }
-    if (typeof video !== "undefined" && document.getElementById(video.id)) {
-      main.state = video.id;
       return main.state;
     }
     if (

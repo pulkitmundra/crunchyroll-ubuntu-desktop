@@ -81,7 +81,38 @@ function setupFloatingToolbar() {
     }
   }
 
+  function isVideoActive() {
+    return (
+      typeof video !== "undefined" &&
+      (Boolean(document.getElementById(video.id)) ||
+        (typeof main !== "undefined" && main.state === video.id))
+    );
+  }
+
+  var hideTimer = null;
+  var lastMouseMoveTime = 0;
+  var lastResizeTime = 0;
+  var lastScreenX = null;
+  var lastScreenY = null;
+  window.lastUserActivityAt = Date.now();
+
+  function forceHideAllOverlays() {
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    document.body.classList.remove("show-floating-toolbar");
+    dock.classList.remove("expanded");
+    if (isVideoActive() && !video.settings.open) {
+      document.body.classList.add("hide-cursor");
+      video.hideOSD();
+    }
+  }
+
+  window.forceHideAllOverlays = forceHideAllOverlays;
+
   function renderState(state) {
+    lastResizeTime = Date.now();
     checkCompactWindow(state);
     if (!state) return;
     if (state.isMiniPlayer) {
@@ -99,28 +130,17 @@ function setupFloatingToolbar() {
       btnPin.classList.remove("active");
       lblPin.textContent = "Pin on Top (F10)";
     }
-  }
 
-  var hideTimer = null;
-  var lastMouseMoveTime = 0;
-  var lastResizeTime = 0;
-  var lastScreenX = null;
-  var lastScreenY = null;
+    if (isVideoActive() && !video.settings.open) {
+      forceHideAllOverlays();
+    }
+  }
 
   function scheduleUnifiedHide(delayMs) {
     var ms = typeof delayMs === "number" ? delayMs : 2000;
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(function () {
-      document.body.classList.remove("show-floating-toolbar");
-      dock.classList.remove("expanded");
-      if (
-        typeof video !== "undefined" &&
-        main.state === video.id &&
-        !video.settings.open
-      ) {
-        document.body.classList.add("hide-cursor");
-        video.hideOSD();
-      }
+      forceHideAllOverlays();
     }, ms);
   }
 
@@ -129,26 +149,39 @@ function setupFloatingToolbar() {
   window.addEventListener("resize", function () {
     lastResizeTime = Date.now();
     checkCompactWindow();
-    if (
-      typeof video !== "undefined" &&
-      main.state === video.id &&
-      !video.settings.open &&
-      !video.speed.state &&
-      video.timers &&
-      video.timers.osd
-    ) {
-      scheduleUnifiedHide(500);
-      clearTimeout(video.timers.osd.object);
-      video.timers.osd.object = setTimeout(function () {
-        video.hideOSD();
-      }, 500);
+    if (isVideoActive() && !video.settings.open) {
+      scheduleUnifiedHide(350);
+      if (video.timers && video.timers.osd) {
+        clearTimeout(video.timers.osd.object);
+        video.timers.osd.object = setTimeout(function () {
+          video.hideOSD();
+        }, 350);
+      }
     }
   });
+
+  window.addEventListener("blur", function () {
+    lastResizeTime = Date.now();
+    forceHideAllOverlays();
+  });
+
+  document.addEventListener("mouseleave", function () {
+    forceHideAllOverlays();
+  });
+
+  if (document.documentElement) {
+    document.documentElement.addEventListener("mouseleave", function () {
+      forceHideAllOverlays();
+    });
+  }
+
   checkCompactWindow();
 
   btnMini.addEventListener("click", function (e) {
     e.stopPropagation();
     this.blur();
+    lastResizeTime = Date.now();
+    forceHideAllOverlays();
     if (window.electronUtilsRender && window.electronUtilsRender.toggleMiniPlayer) {
       window.electronUtilsRender.toggleMiniPlayer().then(renderState);
     }
@@ -157,6 +190,8 @@ function setupFloatingToolbar() {
   btnPin.addEventListener("click", function (e) {
     e.stopPropagation();
     this.blur();
+    lastResizeTime = Date.now();
+    dock.classList.remove("expanded");
     if (window.electronUtilsRender && window.electronUtilsRender.toggleAlwaysOnTop) {
       window.electronUtilsRender.toggleAlwaysOnTop().then(renderState);
     }
@@ -169,7 +204,7 @@ function setupFloatingToolbar() {
   function onUserMouseActivity(e) {
     var now = Date.now();
     if (e && e.type === "mousemove") {
-      if (now - lastResizeTime < 450) return;
+      if (now - lastResizeTime < 650) return;
       if (now - lastMouseMoveTime < 50) return;
       var sx = typeof e.screenX === "number" ? e.screenX : e.clientX;
       var sy = typeof e.screenY === "number" ? e.screenY : e.clientY;
@@ -185,6 +220,7 @@ function setupFloatingToolbar() {
       lastScreenY = sy;
       lastMouseMoveTime = now;
     }
+    window.lastUserActivityAt = now;
     document.body.classList.add("mouse-mode");
     document.body.classList.add("show-floating-toolbar");
     document.body.classList.remove("hide-cursor");
@@ -203,11 +239,7 @@ function setupFloatingToolbar() {
       }
     }
 
-    if (
-      typeof video !== "undefined" &&
-      main.state === video.id &&
-      !video.settings.open
-    ) {
+    if (isVideoActive() && !video.settings.open) {
       video.showOSD(Boolean(video.speed && video.speed.state));
     } else {
       scheduleUnifiedHide(2000);
@@ -302,6 +334,9 @@ function setupMouseSupport() {
 
   window.addEventListener("mousedown", function (e) {
     if (e.button !== 0 || !e.target) return;
+    if (typeof main !== "undefined" && typeof main.resolveState === "function") {
+      main.resolveState();
+    }
     if (typeof video !== "undefined" && main.state === video.id) {
       var osdEl = document.getElementById("osd");
       var osdVisible = !osdEl || osdEl.style.opacity == 1;

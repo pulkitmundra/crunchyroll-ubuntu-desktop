@@ -95,6 +95,9 @@ window.video = {
     video.settings.open = false;
     video.speed.state = false;
     video.option = false;
+    if (typeof menu !== "undefined" && menu.isOpen) {
+      menu.close();
+    }
 
     var video_element = document.createElement("div");
     video_element.id = video.id;
@@ -674,6 +677,7 @@ window.video = {
 
   showOSD: function (noHide) {
     clearTimeout(video.timers.osd.object);
+    window.lastUserActivityAt = Date.now();
     document.body.classList.remove("hide-cursor");
     var osds = document.querySelectorAll("#osd, #video-screen .osd");
     var wasHidden = false;
@@ -689,7 +693,9 @@ window.video = {
         video.setPlayingTime();
       } catch (e) {}
     }
-    var timeoutMs = noHide ? 4000 : video.timers.osd.duration || 2000;
+    var isCompact = document.body.classList.contains("compact-window");
+    var baseDuration = isCompact ? 1400 : video.timers.osd.duration || 2000;
+    var timeoutMs = noHide ? 4000 : baseDuration;
     if (typeof window.syncUserActivityTimer === "function") {
       window.syncUserActivityTimer(timeoutMs);
     }
@@ -714,7 +720,14 @@ window.video = {
       osds[i].style.opacity = "0";
       osds[i].style.pointerEvents = "none";
     }
-    if (typeof main !== "undefined" && main.state === video.id && !video.settings.open) {
+    var dockEl = document.getElementById("top-center-dock");
+    if (dockEl) {
+      dockEl.classList.remove("expanded");
+    }
+    var videoScreenActive =
+      Boolean(document.getElementById(video.id)) ||
+      (typeof main !== "undefined" && main.state === video.id);
+    if (videoScreenActive && !video.settings.open) {
       document.body.classList.add("hide-cursor");
       document.body.classList.remove("show-floating-toolbar");
     }
@@ -775,6 +788,20 @@ window.video = {
     }
 
     var osd = document.getElementById("osd");
+    if (
+      !video.settings.open &&
+      player.values.forward_rewind === 0 &&
+      ((osd && osd.style.opacity !== "0" && osd.style.opacity !== "") ||
+        !document.body.classList.contains("hide-cursor") ||
+        document.body.classList.contains("show-floating-toolbar"))
+    ) {
+      var maxIdleMs = video.speed && video.speed.state ? 4200 : 2200;
+      var lastAct = window.lastUserActivityAt || 0;
+      if (lastAct > 0 && Date.now() - lastAct > maxIdleMs) {
+        video.hideOSD();
+        return;
+      }
+    }
     if (osd && osd.style.opacity == 0 && player.values.forward_rewind === 0) {
       return;
     }
