@@ -101,6 +101,7 @@ All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this fil
     - Validated `event.sender === win.webContents` across all `ipcMain` handlers in `index.js` and replaced the prefix regex in `openExternal` with `new URL(url)` parsing and an exact `ALLOWED_EXTERNAL_HOSTS` `Set` (`https:` only) to prevent hostname-prefix bypasses (`CWE-20`, `CWE-601`).
     - Escaped active profile display names (`menu.escapeHtml`) and validated avatar filenames (`/^[A-Za-z0-9._-]+$/`) in `menu.js` (`CWE-79`).
     - Added `mapper.escapeHtml` and `mylist.escapeHtml` across `crunchyroll.js`, `mylist.js`, `home.js`, `history.js`, `search.js`, `browse.js`, `home.episodes.js`, and `video.js` so user-defined Custom List titles/IDs, metadata badges, and catalog strings are HTML/attribute-escaped before DOM insertion (`CWE-79`).
+    - Fixed top-right video player OSD tooltips (`#setting-options i`) remaining visible after moving the cursor away by clearing `.selected` and `video.option` on mouse leave, removing duplicate native `title` attributes, and right-aligning the rightmost (`Fullscreen`) tooltip.
 
 ---
 

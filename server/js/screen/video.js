@@ -395,7 +395,7 @@ window.video = {
     return video.options
       .map(
         (element) =>
-          `<i class="${element.icon}" data-tooltip="${element.label || ""}" title="${element.label || ""}"></i>`
+          `<i class="${element.icon}" data-tooltip="${element.label || ""}"></i>`
       )
       .join("");
   },
@@ -1479,7 +1479,6 @@ window.video = {
             ? "Playback Speed ([ / ])"
             : "Playback Speed (" + video.speed.active + "x)";
         speedIcon.setAttribute("data-tooltip", speedLabel);
-        speedIcon.setAttribute("title", speedLabel);
         speedIcon.setAttribute(
           "data-speed-badge",
           video.speed.active !== 1 ? video.speed.active + "x" : ""

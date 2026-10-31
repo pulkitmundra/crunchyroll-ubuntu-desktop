@@ -760,6 +760,10 @@ function setupMouseSupport() {
       } else {
         updateProgressHover(hoverBarEl, 0, false);
       }
+      if (e.target && !e.target.closest("#setting-options i") && video.option) {
+        $("#setting-options i").removeClass("selected");
+        video.option = false;
+      }
     }
 
     // Open sidebar menu when cursor enters the left sidebar strip; close when cursor leaves the open drawer
@@ -945,6 +949,9 @@ function setupMouseSupport() {
           allIcons.removeClass("selected");
           $(settingIcon).addClass("selected");
           video.option = true;
+        } else if (video.option) {
+          $("#setting-options i").removeClass("selected");
+          video.option = false;
         }
       }
       return;

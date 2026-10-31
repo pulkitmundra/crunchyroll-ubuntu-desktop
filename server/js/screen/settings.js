@@ -529,7 +529,7 @@ window.settings = {
           <div class="about-header">
             <div class="about-title-block">
               <div class="about-app-name">Crunchyroll Ubuntu Desktop</div>
-              <div class="about-tagline">Unofficial Linux Desktop &amp; HTPC Client with Smart Auto-PiP</div>
+              <div class="about-tagline">Modernist Glassmorphic UI, Custom Lists, Auto-Skip HUD, Mouse/Trackpad &amp; Smart Auto-PiP Edition</div>
             </div>
             <span class="about-version-badge">${ver}</span>
           </div>

@@ -3,11 +3,11 @@ $ crunchyroll --ozone-platform=x11
 ```
 
 <h1 align="center">🎬 Crunchyroll Ubuntu Desktop</h1>
-<h3 align="center">Mouse, Trackpad, Floating Mini-Player & Smart Auto-PiP Edition for Linux</h3>
+<h3 align="center">Modernist Glassmorphic UI, Custom Lists, Auto-Skip HUD, Mouse/Trackpad & Smart Auto-PiP Edition for Linux</h3>
 
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1000&color=F47521&center=true&vCenter=true&width=760&lines=Enhanced+Crunchyroll+Desktop+%26+HTPC+Client+for+Ubuntu%2FLinux;Smart+Auto-PiP+Mini-Player+(F10)+%26+Floating+Window+Mode+(F9);Full+Mouse%2C+Trackpad%2C+Drag-Scrub%2C+Hover+%26+Live+Search+Support;Powered+by+Castlabs+Electron+%2B+Google+Widevine+DRM" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1000&color=F47521&center=true&vCenter=true&width=820&lines=Modernist+Glassmorphic+UI+Overhaul+%26+Star+Ratings+%2B+Sub%2FDub+Badges;Custom+Lists+(Crunchylists)%2C+In-Player+Episodes+(E)+%26+3.2s+Auto-Skip;Smart+Auto-PiP+Mini-Player+(F10)+%26+Floating+Window+Mode+(F9);Full+Mouse%2C+Trackpad%2C+Drag-Scrub%2C+Hover+%26+Live+Search+Support;Powered+by+Castlabs+Electron+%2B+Google+Widevine+DRM" alt="Typing SVG" />
   </a>
 </p>
 
@@ -256,7 +256,7 @@ Built and maintained by **Pulkit Mundra** (Senior Software Developer - SDE-3). I
 
 - Original Tizen frontend by [jhassan8/crunchyroll-tizen](https://github.com/jhassan8/crunchyroll-tizen)
 - Electron Linux wrapper by [aarron-lee/crunchyroll-linux](https://github.com/aarron-lee/crunchyroll-linux)
-- Desktop Mouse/Trackpad, Floating Dock & Smart Auto-PiP Edition by [Pulkit Mundra](https://github.com/pulkitmundra)
+- Complete Modernist UI Overhaul, Custom Lists ("Crunchylists"), In-Player Episodes & Auto-Skip HUD, Desktop Mouse/Trackpad, Floating Dock & Smart Auto-PiP Edition by [Pulkit Mundra](https://github.com/pulkitmundra)
 - License: **ISC** (see [`LICENSE`](LICENSE))
 
 ---
