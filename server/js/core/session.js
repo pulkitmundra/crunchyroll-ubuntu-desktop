@@ -4,7 +4,7 @@ window.session = {
     subtitles: {},
   },
   storage: {
-    version: NaN,
+    version: "v2.0.0",
     language: NaN,
     quality: "auto",
     account: {
@@ -66,6 +66,7 @@ window.session = {
         console.log("error parse session.");
       }
     }
+    session.storage.version = "v2.0.0";
 
     session.update();
   },
@@ -77,6 +78,10 @@ window.session = {
         username: username,
       },
       success: function (response) {
+        if (!response || !response.access_token) {
+          session.clear();
+          return callback && callback.error && callback.error(response);
+        }
         session.storage.expires_in = new Date().setSeconds(
           new Date().getSeconds() + response.expires_in,
         );
@@ -100,55 +105,103 @@ window.session = {
     });
   },
 
+  _refreshing: false,
+  _refreshQueue: [],
+  _fetchingCookies: false,
+  _cookiesQueue: [],
+
   refresh: function (callback) {
     if (session.isExpired()) {
+      session._refreshQueue.push(callback);
+      if (session._refreshing) {
+        return;
+      }
+      session._refreshing = true;
       service.refresh({
         data: {
           refresh_token: session.storage.refresh_token,
         },
         success: function (response) {
+          session._refreshing = false;
+          var queue = session._refreshQueue.slice();
+          session._refreshQueue = [];
+          if (!response || !response.access_token) {
+            queue.forEach(function (cb) {
+              cb && cb.error && cb.error(response);
+            });
+            return;
+          }
           session.storage.expires_in = new Date().setSeconds(
             new Date().getSeconds() + response.expires_in,
           );
           session.storage.id = response.account_id;
+          if (response.profile_id) {
+            session.storage.profile_id = response.profile_id;
+          }
           session.storage.country = response.country;
           session.storage.token_type = response.token_type;
           session.storage.access_token = response.access_token;
           session.storage.refresh_token = response.refresh_token;
 
-          callback.success(session.update());
+          var updated = session.update();
+          queue.forEach(function (cb) {
+            cb && cb.success && cb.success(updated);
+          });
         },
         error: function (error) {
-          callback.error(error);
+          session._refreshing = false;
+          var queue = session._refreshQueue.slice();
+          session._refreshQueue = [];
+          queue.forEach(function (cb) {
+            cb && cb.error && cb.error(error);
+          });
         },
       });
       return;
     }
-    callback.success(session.storage);
+    callback && callback.success && callback.success(session.storage);
   },
 
   cookies: function (callback) {
     if (session.isExpired(true)) {
+      session._cookiesQueue.push(callback);
+      if (session._fetchingCookies) {
+        return;
+      }
+      session._fetchingCookies = true;
       service.cookies({
         success: function (response) {
-          session.storage.cookies.bucket = response.cms.bucket;
-          session.storage.account.premium =
-            session.storage.cookies.bucket.includes("crunchyroll");
-          session.storage.cookies.policy = response.cms.policy;
-          session.storage.cookies.signature = response.cms.signature;
-          session.storage.cookies.key_pair_id = response.cms.key_pair_id;
-          session.storage.cookies.expires = new Date(
-            response.cms.expires,
-          ).getTime();
+          session._fetchingCookies = false;
+          var queue = session._cookiesQueue.slice();
+          session._cookiesQueue = [];
+          if (response && response.cms) {
+            session.storage.cookies.bucket = response.cms.bucket;
+            session.storage.account.premium =
+              session.storage.cookies.bucket.includes("crunchyroll");
+            session.storage.cookies.policy = response.cms.policy;
+            session.storage.cookies.signature = response.cms.signature;
+            session.storage.cookies.key_pair_id = response.cms.key_pair_id;
+            session.storage.cookies.expires = new Date(
+              response.cms.expires,
+            ).getTime();
+          }
 
-          callback.success(session.update());
+          var updated = session.update();
+          queue.forEach(function (cb) {
+            cb && cb.success && cb.success(updated);
+          });
         },
         error: function (error) {
-          callback.error(error);
+          session._fetchingCookies = false;
+          var queue = session._cookiesQueue.slice();
+          session._cookiesQueue = [];
+          queue.forEach(function (cb) {
+            cb && cb.error && cb.error(error);
+          });
         },
       });
     } else {
-      callback.success(session.storage);
+      callback && callback.success && callback.success(session.storage);
     }
   },
 
@@ -179,9 +232,13 @@ window.session = {
     try {
       service.profiles({
         success: function (response) {
-          session.storage.profiles = response.profiles;
+          session.storage.profiles = (response && response.profiles) || [];
           session.update();
-          callback && callback.success();
+          callback && callback.success && callback.success();
+        },
+        error: function (error) {
+          console.error("load_profiles", error);
+          callback && callback.error && callback.error(error);
         },
       });
 
@@ -191,6 +248,7 @@ window.session = {
       });
     } catch (e) {
       console.error("load_profiles", e);
+      callback && callback.error && callback.error(e);
     }
   },
 
@@ -198,6 +256,9 @@ window.session = {
     return service.switchProfile(
       {
         success: (json) => {
+          if (!json || !json.access_token) {
+            return callback && callback.error && callback.error(json);
+          }
           session.storage.expires_in = new Date().setSeconds(
             new Date().getSeconds() + json.expires_in,
           );
@@ -212,7 +273,7 @@ window.session = {
           // refresh profiles to set correct is_selected status
           service.profiles({
             success: (response) => {
-              session.storage.profiles = response.profiles;
+              session.storage.profiles = (response && response.profiles) || [];
 
               session.storage.profiles.forEach((profile) => {
                 if (profile.is_selected) {
@@ -228,7 +289,10 @@ window.session = {
 
               return callback.success(json);
             },
-            error: console.error,
+            error: (err) => {
+              console.error(err);
+              return callback.success(json);
+            },
           });
         },
         error: callback.error,

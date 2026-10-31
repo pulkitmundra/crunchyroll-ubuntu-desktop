@@ -1,7 +1,9 @@
 #loading-screen {
   width: 100%;
   height: 100%;
-  background-color: #000;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(244, 117, 33, 0.12) 0%, transparent 55%),
+    #08080c;
   position: absolute;
   display: flex;
   align-items: center;
@@ -13,29 +15,32 @@
   display: flex;
   align-items: center;
   flex-direction: column;
+  gap: 12px;
 }
 
 #loading-screen .content .logo {
-  width: 30vh;
+  width: 220px;
 }
 
 #loading-screen .content .logo img {
   width: 100%;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.65));
 }
 
 #loading-screen .content .loading {
   position: relative;
-  transform: scale(1.5);
+  transform: scale(1.1);
   width: 69px;
-  height: 118px;
+  height: 90px;
 }
 
 #loading-screen .content .loading span {
   position: absolute;
   bottom: 0;
-  width: 15px;
-  height: 18px;
-  background: #fff;
+  width: 12px;
+  height: 14px;
+  background: #f47521;
+  box-shadow: 0 0 12px rgba(244, 117, 33, 0.55);
   border-radius: 50px;
   left: 0;
   animation: bounce 1s infinite;
@@ -62,20 +67,20 @@
   }
 
   5% {
-    bottom: 18px;
+    bottom: 16px;
   }
 
   15% {
-    bottom: 20px;
-    height: 40px;
+    bottom: 18px;
+    height: 34px;
   }
 
   30% {
-    bottom: 20px;
+    bottom: 18px;
   }
 
   50% {
-    height: 18px;
+    height: 14px;
   }
 
   60% {
@@ -95,7 +100,7 @@
   }
 
   100% {
-    height: 18px;
+    height: 14px;
     bottom: 0px;
   }
 }
@@ -104,7 +109,9 @@
   left: 0;
   top: 0;
   z-index: 5;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(8, 8, 12, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 #loading-screen.flat .content .loading {
@@ -114,22 +121,15 @@
   top: 0;
   bottom: 0;
   margin: auto;
-  width: 4vw;
-  height: 5vw;
-}
-
-#loading-screen.flat .content .loading {
   box-sizing: border-box;
-  width: 4vw;
-  height: 4vw;
-  border-radius: 100%;
-  border: 0.7rem solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
-  animation: spin 0.8s infinite linear;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3.5px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #f47521;
+  animation: spin 0.75s infinite linear;
   transform: none;
 }
-
-
 
 @keyframes spin {
   100% {

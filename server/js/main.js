@@ -15,9 +15,9 @@ window.main = {
     translate.init();
     main.events.login();
 
-    // TODO: temporal config for LG
+    // Include Escape (27), Backspace (8), and TV Back keys (10009, 461)
     tvKey.IS_KEY_BACK = function (keyCode) {
-      return [10009, 27, 461].includes(keyCode) ? keyCode : -1;
+      return [10009, 27, 461, 8].includes(keyCode) ? keyCode : -1;
     };
   },
 
@@ -91,6 +91,8 @@ window.main = {
             },
             error: function (error) {
               console.log("load_account", error);
+              loading.destroy();
+              login.init();
             },
           });
         },
@@ -121,21 +123,19 @@ window.main = {
       main.state = keyboard.id;
       return main.state;
     }
-    if (typeof video !== "undefined" && document.getElementById(video.id)) {
-      if (typeof menu !== "undefined" && menu.isOpen) {
-        menu.isOpen = false;
-      }
-      main.state = video.id;
-      return main.state;
-    }
     var menuEl = typeof menu !== "undefined" && document.getElementById(menu.id);
     if (
       typeof menu !== "undefined" &&
       menu.isOpen &&
       menuEl &&
-      menuEl.offsetParent !== null
+      (document.body.classList.contains("open-menu") ||
+        window.getComputedStyle(menuEl).display !== "none")
     ) {
       main.state = menu.id;
+      return main.state;
+    }
+    if (typeof video !== "undefined" && document.getElementById(video.id)) {
+      main.state = video.id;
       return main.state;
     }
     if (

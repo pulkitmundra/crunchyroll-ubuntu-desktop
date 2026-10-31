@@ -21,8 +21,8 @@ window.mylist = {
             </div>
             <div class="information">
               <div id="generic-title"></div>
+              <div class="extra-info"><div class="cr-meta-row" id="generic-meta-row"></div></div>
               <div id="generic-description"></div>
-              <div class="extra-info"></div>
             </div>
           </div>
           <div class="lists">
@@ -56,7 +56,14 @@ window.mylist = {
         console.log(error);
         mylist_element.innerHTML = `
         <div class="content">
-          error
+          <div class="lists">
+            <div class="inner-lists">
+              <div class="list-end">
+                <img src="server/img/empty_data.png"/>
+                <div class="text">${translate.go("lists.empty")}</div>
+              </div>
+            </div>
+          </div>
           <div class="logo-fixed">
             <img src="server/img/logo-big.png"/>
           </div>
@@ -82,25 +89,29 @@ window.mylist = {
         menu.open();
         break;
       case tvKey.KEY_UP:
-        var options = $(`.row`);
+        var options = $(`#${mylist.id} .row`);
+        if (!options.length) break;
         var current = mylist.selectedRow;
 
         options.removeClass("selected");
         var newCurrent = current > 0 ? current - 1 : current;
         options.eq(newCurrent).addClass("selected");
         mylist.selectedRow = newCurrent;
+        var rowPitch = options.get(0) ? options.get(0).offsetHeight + 28 : 300;
         var marginTop = 0;
         var max = 1;
         if (options.length > max && newCurrent > max - 1) {
-          marginTop = -((newCurrent - (max - 1)) * 231);
+          marginTop = -((newCurrent - (max - 1)) * rowPitch);
         }
 
-        $(".inner-lists")[0].style.marginTop = `${marginTop}px`;
+        if ($(`#${mylist.id} .inner-lists`)[0]) {
+          $(`#${mylist.id} .inner-lists`)[0].style.marginTop = `${marginTop}px`;
+        }
         mylist.details();
         break;
       case tvKey.KEY_DOWN:
-        // -235px
-        var options = $(`.row`);
+        var options = $(`#${mylist.id} .row`);
+        if (!options.length) break;
         var current = mylist.selectedRow;
 
         options.removeClass("selected");
@@ -108,55 +119,67 @@ window.mylist = {
         options.eq(newCurrent).addClass("selected");
         mylist.selectedRow = newCurrent;
 
+        var rowPitch = options.get(0) ? options.get(0).offsetHeight + 28 : 300;
         var marginTop = 0;
         var max = 1;
         if (options.length > max && newCurrent > max - 1) {
-          marginTop = -((newCurrent - (max - 1)) * 231);
+          marginTop = -((newCurrent - (max - 1)) * rowPitch);
         }
 
-        $(".inner-lists")[0].style.marginTop = `${marginTop}px`;
+        if ($(`#${mylist.id} .inner-lists`)[0]) {
+          $(`#${mylist.id} .inner-lists`)[0].style.marginTop = `${marginTop}px`;
+        }
         mylist.details();
         break;
       case tvKey.KEY_LEFT:
-        if (
-          $(".row-content").length === 0 ||
-          $(".row-content")[mylist.selectedRow].slick.currentSlide === 0
-        ) {
+        var rowEl = $(`#${mylist.id} .row-content`)[mylist.selectedRow];
+        if (!rowEl || !rowEl.slick || rowEl.slick.currentSlide === 0) {
           menu.open();
         } else {
-          $(".row-content")[mylist.selectedRow].slick.prev();
+          rowEl.slick.prev();
           mylist.details();
         }
         break;
       case tvKey.KEY_RIGHT:
+        var rowEl = $(`#${mylist.id} .row-content`)[mylist.selectedRow];
+        var listObj = mylist.data.lists[mylist.selectedRow];
         if (
-          $(".row-content")[mylist.selectedRow].slick.currentSlide <
-          mylist.data.lists[mylist.selectedRow].items.length - 1
+          rowEl &&
+          rowEl.slick &&
+          listObj &&
+          rowEl.slick.currentSlide < listObj.items.length - 1
         ) {
-          $(".row-content")[mylist.selectedRow].slick.next();
+          rowEl.slick.next();
           mylist.details();
         }
         break;
       case tvKey.KEY_ENTER:
       case tvKey.KEY_PANEL_ENTER:
-        var item =
-          mylist.data.lists[mylist.selectedRow].items[
-            $(".row-content")[mylist.selectedRow].slick.currentSlide
-          ];
+        var rowEl = $(`#${mylist.id} .row-content`)[mylist.selectedRow];
+        var listObj = mylist.data.lists[mylist.selectedRow];
+        if (!rowEl || !rowEl.slick || !listObj) break;
+        var item = listObj.items[rowEl.slick.currentSlide];
+        if (!item || !item.id) break;
         home_details.init(
           item,
           function (item) {
+            $("[id='home-screen']").remove();
             var home_element = document.createElement("div");
             home_element.id = home.id;
             home_element.innerHTML = `
             <div class="content">
               <div class="details full">
                 <div class="background">
-                  <img src="${item.background}">
+                  <img src="${mylist.escapeHtml(item.background)}">
                 </div>
                 <div class="info">
-                  <div class="title resize">${item.title}</div>
-                  <div class="description resize">${item.description}</div>
+                  <div class="title resize">${mylist.escapeHtml(item.title)}</div>
+                  <div class="cr-meta-row" id="hero-meta-row">${
+                    typeof mapper !== "undefined" && mapper.formatMetaBadges
+                      ? mapper.formatMetaBadges(item)
+                      : ""
+                  }</div>
+                  <div class="description resize">${mylist.escapeHtml(item.description)}</div>
                   <div class="buttons">
                     <a class="selected">${translate.go("home.banner.play")}</a>
                     <a>${translate.go("home.banner.info")}</a>
@@ -173,10 +196,13 @@ window.mylist = {
             document.body.appendChild(home_element);
           },
           function () {
+            home.destroy();
             var mlEl = document.getElementById(mylist.id);
             if (mlEl) {
               mlEl.style.display = "block";
-              home.destroy();
+              if (typeof window.refreshSlickLayouts === "function") {
+                window.refreshSlickLayouts();
+              }
             }
           }
         );
@@ -184,10 +210,19 @@ window.mylist = {
     }
   },
 
+  escapeHtml: function (str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  },
+
   loadLists: function (callback) {
     service.getCustomLists({
       success: function (responseList) {
-        listToFetch = [
+        var listToFetch = [
           {
             order: 0,
             title: "lists.watchlist",
@@ -195,7 +230,8 @@ window.mylist = {
           },
         ];
 
-        responseList.data.forEach((customList, index) => {
+        var customLists = (responseList && Array.isArray(responseList.data)) ? responseList.data : [];
+        customLists.forEach((customList, index) => {
           listToFetch.push({
             order: index + 1,
             title: customList.title,
@@ -210,10 +246,11 @@ window.mylist = {
             success: function (responseItems) {
               mylist.data.loadedLists++;
 
-              if (responseItems.data.length > 0) {
+              if (responseItems && Array.isArray(responseItems.data) && responseItems.data.length > 0) {
                 mylist.data.lists.push({
                   order: item.order,
                   title: item.title,
+                  list_id: item.data || "watchlist",
                   items: mapper.mapItems(responseItems.data),
                 });
               }
@@ -227,6 +264,13 @@ window.mylist = {
             },
             error: function (error) {
               console.log(error);
+              mylist.data.loadedLists++;
+              if (mylist.data.loadedLists === listToFetch.length) {
+                mylist.data.lists.sort(function (a, b) {
+                  return a.order - b.order;
+                });
+                callback.success();
+              }
             },
           });
         });
@@ -241,12 +285,17 @@ window.mylist = {
     var poster_items = ``;
     mylist.data.lists.forEach((element, index) => {
       if (element.items.length > 0) {
+        var rowTitleText =
+          element.title === "lists.watchlist"
+            ? translate.go(element.title)
+            : mylist.escapeHtml(element.title);
+        var safeListId = mylist.escapeHtml(element.list_id || "watchlist");
         poster_items += `
-      <div class="row ${index === mylist.selectedRow ? "selected" : ""}">
-        <div class="row-title">${translate.go(element.title)}</div>
+      <div class="row ${index === mylist.selectedRow ? "selected" : ""}" data-list-id="${safeListId}">
+        <div class="row-title">${rowTitleText}</div>
         <div class="row-content fixed-error">`;
         element.items.forEach((item) => {
-          poster_items += mylist.createItem(item);
+          poster_items += mylist.createItem(item, element.list_id || "watchlist");
         });
         for (var index = 0; index < 9; index++) {
           poster_items += mylist.createEmptyItem();
@@ -258,24 +307,67 @@ window.mylist = {
     return poster_items;
   },
 
-  createItem: function (item) {
+  createItem: function (item, listId) {
+    var remMin =
+      item.duration && item.playhead
+        ? Math.max(1, Math.round(item.duration - item.playhead))
+        : 0;
     var playhead = item.playhead
-      ? `<div class="progress" style="width: ${
+      ? `<div class="progress" style="width: ${Math.min(
+          100,
           (item.playhead * 100) / item.duration
-        }%" value="${item.duration - item.playhead}m"></div>`
+        )}%" value="${remMin}m"></div>`
+      : "";
+    var badges =
+      typeof mapper !== "undefined" && mapper.formatCardBadges
+        ? mapper.formatCardBadges(item)
+        : "";
+    var titleOverlay = item.title
+      ? `<div class="cr-card-title">${mylist.escapeHtml(item.title)}</div>`
+      : "";
+    var safeId = mylist.escapeHtml(item.id || "");
+    var safeListId = mylist.escapeHtml(listId || "watchlist");
+    var removeBtn = item.id
+      ? `<button type="button" class="mylist-quick-remove" data-content-id="${safeId}" data-list-id="${safeListId}" title="Remove from this list"><i class="fa-solid fa-trash-can"></i></button>`
       : "";
     return `
     <div class="item">
       <div class="poster">
-        <img src="${item.background}"/>
+        <img src="${mylist.escapeHtml(item.background)}"/>
         ${playhead}
+        ${badges}
+        ${removeBtn}
+        ${titleOverlay}
       </div>
     </div>`;
   },
 
+  removeItemFromList: function (listId, contentId) {
+    if (!contentId) return;
+    loading.start();
+    var onDone = function () {
+      loading.end();
+      mylist.destroy();
+      mylist.init();
+    };
+    if (!listId || listId === "watchlist") {
+      service.removeWatchlist({
+        data: { content_id: contentId },
+        success: onDone,
+        error: onDone,
+      });
+    } else {
+      service.removeCustomListItem({
+        data: { list_id: listId, content_id: contentId },
+        success: onDone,
+        error: onDone,
+      });
+    }
+  },
+
   createEmptyItem: function (type) {
     return `
-    <div class="item">
+    <div class="item empty">
       <div class="poster">
         <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
       </div>
@@ -284,20 +376,26 @@ window.mylist = {
 
   details: function () {
     try {
-      var item =
-        mylist.data.lists[mylist.selectedRow].items[
-          $(".row-content")[mylist.selectedRow].slick.currentSlide
-        ];
-      $(".details .background img").attr("src", item.background);
-      var title = $(".details .information #generic-title")[0];
-      title.innerText = item.title;
-      title.style.fontSize =
-        title.scrollHeight > title.clientHeight ? "2.5vh" : "4vh";
+      var rowEl = $(`#${mylist.id} .row-content`)[mylist.selectedRow];
+      var listObj = mylist.data.lists[mylist.selectedRow];
+      if (!rowEl || !rowEl.slick || !listObj) return;
+      var item = listObj.items[rowEl.slick.currentSlide];
+      if (!item) return;
+      $(`#${mylist.id} .details .background img`).attr("src", item.background);
+      var title = $(`#${mylist.id} .details .information #generic-title`)[0];
+      if (title) {
+        title.innerText = item.title;
+      }
 
-      var description = $(".details .information #generic-description")[0];
-      description.innerText = item.description;
-      description.style.fontSize =
-        description.scrollHeight > description.clientHeight ? "1.5vh" : "2vh";
+      var description = $(`#${mylist.id} .details .information #generic-description`)[0];
+      if (description) {
+        description.innerText = item.description;
+      }
+
+      var extraEl = $(`#${mylist.id} .details .information .extra-info`)[0];
+      if (extraEl && typeof mapper !== "undefined" && mapper.formatMetaBadges) {
+        extraEl.innerHTML = `<div class="cr-meta-row" id="generic-meta-row">${mapper.formatMetaBadges(item)}</div>`;
+      }
     } catch (error) {
       console.log(error);
     }

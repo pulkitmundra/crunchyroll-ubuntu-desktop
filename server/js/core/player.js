@@ -27,6 +27,13 @@ window.player = {
       newVideo.id = "videoplayer";
       newVideo.style.height = "100%";
       newVideo.style.width = "100%";
+      if (
+        typeof video !== "undefined" &&
+        video.aspects &&
+        video.aspects[video.aspect]
+      ) {
+        newVideo.style.objectFit = video.aspects[video.aspect];
+      }
 
       $("#video-screen .content").prepend(newVideo);
       player.video = newVideo;
@@ -36,16 +43,34 @@ window.player = {
 
   deleteVideo: function () {
     player.video = document.getElementById("videoplayer");
-    player.video.parentNode.removeChild(player.video);
+    if (player.video && player.video.parentNode) {
+      player.video.parentNode.removeChild(player.video);
+    }
   },
 
   config: function (timeFunction, endFunction) {
     player.deleteVideo();
-    player.getVideo().addEventListener("timeupdate", timeFunction);
-    player.getVideo().addEventListener("ended", endFunction);
-    player.getVideo().addEventListener("waiting", player.onbufferingstart);
-    player.getVideo().addEventListener("playing", player.onbufferingcomplete);
-    player.getVideo().addEventListener("seeked", function () {
+    var v = player.getVideo();
+    try {
+      var savedVol = parseFloat(localStorage.getItem("cr_volume"));
+      if (!isNaN(savedVol) && savedVol >= 0 && savedVol <= 1) {
+        v.volume = savedVol;
+      }
+      var savedMuted = localStorage.getItem("cr_muted");
+      if (savedMuted === "true") {
+        v.muted = true;
+      }
+    } catch (e) {}
+    v.addEventListener("timeupdate", timeFunction);
+    v.addEventListener("ended", endFunction);
+    v.addEventListener("waiting", player.onbufferingstart);
+    v.addEventListener("playing", player.onbufferingcomplete);
+    v.addEventListener("volumechange", function () {
+      if (typeof video !== "undefined" && typeof video.syncVolumeUI === "function") {
+        video.syncVolumeUI();
+      }
+    });
+    v.addEventListener("seeked", function () {
       if (player.getVideo().paused) {
         video.showBTN("pause");
       } else {
@@ -167,10 +192,7 @@ window.player = {
         });
 
         player.noplay = noplay;
-
-        if (playhead && playhead > 0) {
-          player.playhead = playhead * 60;
-        }
+        player.playhead = playhead && playhead > 0 ? playhead * 60 : null;
       },
     });
   },
@@ -195,50 +217,102 @@ window.player = {
     }
   },
 
-  rewind: function (callback) {
-    player.pause();
+  seekBy: function (deltaSeconds, callback) {
+    var v = player.getVideo();
+    if (!v) return;
+    var dur = player.getDuration();
+    if (!dur || isNaN(dur)) return;
     clearTimeout(player.timers.forward_rewind);
-    video.showBTN("rewind");
-    player.values.forward_rewind -= player.getDuration() * 0.01;
-    callback(player.values.forward_rewind);
+    player.values.forward_rewind = 0;
+    var target = Math.max(0, Math.min(dur - 0.5, (v.currentTime || 0) + deltaSeconds));
+    v.currentTime = target;
+    video.showBTN(deltaSeconds < 0 ? "rewind" : "forward");
+    if (typeof callback === "function") {
+      callback(0);
+    }
     player.timers.forward_rewind = setTimeout(function () {
-      player.getVideo().currentTime =
-        player.values.forward_rewind + player.getPlayed() < 0
-          ? 0
-          : player.values.forward_rewind + player.getPlayed();
-      player.values.forward_rewind = 0;
-      player.resume();
-    }, 500);
+      if (v.paused) {
+        video.showBTN("pause");
+      } else {
+        video.hideBTN();
+      }
+    }, 350);
   },
 
-  forward: function (callback) {
-    player.state = player.states.FORWARD;
-    player.pause();
-    clearTimeout(player.timers.forward_rewind);
-    video.showBTN("forward");
-    player.values.forward_rewind += player.getDuration() * 0.01;
-    callback(player.values.forward_rewind);
-    player.timers.forward_rewind = setTimeout(function () {
-      player.getVideo().currentTime =
-        player.values.forward_rewind + player.getPlayed() >
-        player.getDuration() - player.getDuration() * 0.02
-          ? player.getPlayed()
-          : player.values.forward_rewind + player.getPlayed();
-      player.values.forward_rewind = 0;
-      player.resume();
-    }, 500);
+  rewind: function (callback, seconds) {
+    player.seekBy(-(seconds || 10), callback);
+  },
+
+  forward: function (callback, seconds) {
+    player.seekBy(seconds || 10, callback);
   },
 
   forwardTo: function (seconds) {
     player.getVideo().currentTime = seconds;
   },
 
+  setVolume: function (vol) {
+    var v = player.getVideo();
+    if (!v) return 1;
+    var clamped = Math.max(0, Math.min(1, vol));
+    v.volume = clamped;
+    if (clamped > 0 && v.muted) {
+      v.muted = false;
+    }
+    try {
+      localStorage.setItem("cr_volume", String(clamped));
+      localStorage.setItem("cr_muted", String(v.muted));
+    } catch (e) {}
+    if (typeof video !== "undefined" && typeof video.syncVolumeUI === "function") {
+      video.syncVolumeUI(true);
+    }
+    return clamped;
+  },
+
+  adjustVolume: function (delta) {
+    var v = player.getVideo();
+    if (!v) return 1;
+    var base = v.muted ? 0 : v.volume;
+    return player.setVolume(Math.round((base + delta) * 20) / 20);
+  },
+
+  toggleMute: function () {
+    var v = player.getVideo();
+    if (!v) return false;
+    v.muted = !v.muted;
+    if (!v.muted && v.volume === 0) {
+      v.volume = 0.5;
+    }
+    try {
+      localStorage.setItem("cr_muted", String(v.muted));
+      localStorage.setItem("cr_volume", String(v.volume));
+    } catch (e) {}
+    if (typeof video !== "undefined" && typeof video.syncVolumeUI === "function") {
+      video.syncVolumeUI(true);
+    }
+    return v.muted;
+  },
+
   getQuality: function () {
-    var qualities = player.plugin.getBitrateInfoListFor("video");
-    var id = Object.keys(qualities).find(
-      (key) => qualities[key].height === +session.storage.quality
-    );
-    return id !== undefined ? id : -1;
+    if (!player.plugin || typeof player.plugin.getBitrateInfoListFor !== "function") {
+      return -1;
+    }
+    var qualities = player.plugin.getBitrateInfoListFor("video") || [];
+    if (!qualities.length) return -1;
+    var targetHeight = Number(session.storage.quality);
+    if (!targetHeight) return -1;
+    var exactIdx = qualities.findIndex((q) => q && q.height === targetHeight);
+    if (exactIdx >= 0) return exactIdx;
+    var bestIdx = -1;
+    var bestHeight = -1;
+    for (var i = 0; i < qualities.length; i++) {
+      var h = qualities[i] && qualities[i].height ? qualities[i].height : 0;
+      if (h <= targetHeight && h > bestHeight) {
+        bestHeight = h;
+        bestIdx = i;
+      }
+    }
+    return bestIdx >= 0 ? bestIdx : 0;
   },
 
   stop: function () {
@@ -269,8 +343,23 @@ window.player = {
   },
 
   onbufferingcomplete: function () {
-    if (session.storage.quality !== "auto") {
-      player.plugin.setQualityFor("video", player.getQuality());
+    if (
+      session.storage.quality !== "auto" &&
+      player.plugin &&
+      typeof player.plugin.setQualityFor === "function"
+    ) {
+      var qIdx = player.getQuality();
+      if (qIdx >= 0) {
+        player.plugin.setQualityFor("video", qIdx);
+      }
+    }
+
+    if (typeof video !== "undefined" && video.speed && video.speed.active) {
+      player.getVideo().playbackRate = video.speed.active;
+    }
+
+    if (typeof video !== "undefined" && typeof video.syncVolumeUI === "function") {
+      video.syncVolumeUI();
     }
 
     if (player.playhead) {

@@ -10,167 +10,229 @@
 #menu-screen .content {
   pointer-events: auto;
   height: 100%;
-  width: 135px;
-  padding: 50px 25px 50px 60px;
-  transition: width 0.16s ease;
+  width: 96px;
+  padding: 28px 18px;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 10, 15, 0.78) 0%,
+    rgba(10, 10, 15, 0.35) 75%,
+    rgba(10, 10, 15, 0) 100%
+  );
+  transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.22s ease,
+    border-color 0.22s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  border-right: 1px solid transparent;
 }
 
 #menu-screen .content .options,
 #menu-screen .content .tools {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 6px;
 }
 
-#menu-screen .content .options .option,
+#menu-screen .content .options .option:not(.profile),
 #menu-screen .content .tools .option {
-  color: #fff;
-  font-size: 25px;
-  opacity: 0.5;
-  margin: 30px 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 19px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  margin: 0;
   display: flex;
   align-items: center;
+  position: relative;
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-#menu-screen .content .options .option i,
+#menu-screen .content .options .option:not(.profile) i,
 #menu-screen .content .tools .option i {
-  float: left;
-  width: 30px;
+  width: 28px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 #menu-screen .content .options .option p,
 #menu-screen .content .tools .option p {
-  float: left;
   width: 0;
   overflow: hidden;
-  height: 0;
-  margin: 0;
-  margin-left: 20px;
-  line-height: 22px;
+  opacity: 0;
+  margin: 0 0 0 14px;
+  font-size: 14.5px;
+  line-height: 20px;
   text-transform: uppercase;
-  /* transition: width 0.3s; */
+  font-weight: 700;
+  letter-spacing: 0.06em;
   white-space: nowrap;
+  transition: opacity 0.16s ease, width 0.18s ease;
 }
 
-#menu-screen .content .options .option.selected,
-#menu-screen .content .tools .option.selected,
-#menu-screen .content .options .option.focus,
+#menu-screen .content .options .option:not(.profile).selected,
+#menu-screen .content .tools .option.selected {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+#menu-screen .content .options .option:not(.profile).selected i,
+#menu-screen .content .tools .option.selected i {
+  color: #f47521;
+}
+
+#menu-screen .content .options .option:not(.profile).focus,
 #menu-screen .content .tools .option.focus {
-  opacity: 1;
-  position: relative;
+  color: #fff;
+  background: rgba(244, 117, 33, 0.16);
+  border-color: rgba(244, 117, 33, 0.65);
+  transform: translateX(3px);
 }
 
-#menu-screen .content .options .option.focus::after,
-#menu-screen .content .tools .option.focus::after {
+#menu-screen .content .options .option:not(.profile).focus i,
+#menu-screen .content .tools .option.focus i {
+  color: #f47521;
+}
+
+#menu-screen .content .options .option:not(.profile).focus::before,
+#menu-screen .content .tools .option.focus::before,
+#menu-screen .content .options .option:not(.profile).selected::before,
+#menu-screen .content .tools .option.selected::before {
   content: "";
   background: #f47521;
-  /* box-shadow: 0 0 25px 6px #f47521, 0 0 15px 6px #f47521 inset; */
-  width: 15px;
-  height: 60px;
+  box-shadow: 0 0 10px rgba(244, 117, 33, 0.7);
+  border-radius: 999px;
+  width: 3.5px;
+  height: 22px;
   position: absolute;
-  left: -60px;
-  top: -15px;
+  left: -9px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .open-menu #menu-screen {
-  background: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  background: rgba(6, 6, 10, 0.55);
+  backdrop-filter: blur(8px);
   width: 100vw;
-  z-index: 8000;
+  z-index: 9600 !important;
   display: block !important;
   pointer-events: auto;
 }
 
 .open-menu #menu-screen .content {
-  background: linear-gradient(
-    90deg,
-    rgb(0, 0, 0) 0%,
-    rgb(0, 0, 0) 65%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  width: 440px;
+  background: rgba(12, 12, 18, 0.94);
+  backdrop-filter: blur(22px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.85);
+  width: 300px;
+  padding: 28px 22px;
 }
 
 .open-menu #menu-screen .content .options .option p,
 .open-menu #menu-screen .content .tools .option p {
-  width: 300px;
-  height: unset;
+  width: 190px;
+  opacity: 1;
 }
 
 .open-menu #menu-screen .content .profile.premium i {
-  display: block;
+  display: inline-block;
 }
 
 #menu-screen .content .options .profile {
   display: flex;
   align-items: center;
-  margin-bottom: 125px;
+  margin-bottom: 36px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid transparent;
   opacity: 1;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.open-menu #menu-screen .content .options .profile {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+  padding: 10px 12px;
 }
 
 #menu-screen .content .options .profile .profile-text {
   width: 0;
   overflow: hidden;
   height: 0;
-  margin: 0;
-  text-transform: uppercase;
-  margin-left: 20px;
+  opacity: 0;
+  margin: 0 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: opacity 0.16s ease;
 }
 
 #menu-screen .content .options .profile .profile-text .profile-change {
-  font-size: 12px;
-  opacity: 0.6;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.52);
 }
 
 #menu-screen .content .options .profile .avatar {
   border-radius: 50%;
   overflow: hidden;
-  opacity: 0.6;
-  width: 60px;
-  height: 60px;
-  margin-left: -10px;
-  opacity: 1;
-  float: left;
-  border: 5px solid transparent;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 #menu-screen .content .options .profile .avatar img {
-  float: left;
   width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 #menu-screen .content .options .profile .profile-name {
-  float: left;
-  line-height: 22px;
-  /* transition: width 0.3s; */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
   white-space: nowrap;
   color: #fff;
-  font-size: 18px;
-}
-
-#menu-screen .content .options .profile .profile-name span {
-  float: left;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 #menu-screen .content .options .profile i {
   color: #f47521;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: 13px;
   display: none;
 }
 
 .open-menu #menu-screen .content .options .profile .profile-text {
   width: auto;
-  height: unset;
+  height: auto;
+  opacity: 1;
 }
 
-#menu-screen .content .options .profile.option.focus::after {
-  display: none;
+#menu-screen .content .options .profile.option.focus {
+  background: rgba(244, 117, 33, 0.14);
+  border-color: rgba(244, 117, 33, 0.65);
 }
 
 #menu-screen .content .options .profile.option.focus .avatar {
-  border: 5px solid #f47521;
+  border-color: #f47521;
+  box-shadow: 0 0 12px rgba(244, 117, 33, 0.5);
 }

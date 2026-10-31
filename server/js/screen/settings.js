@@ -1,12 +1,82 @@
 const CONTROLLER_KEY = "controllerSupport";
+const PLAYBACK_PREFS_KEY = "cr_playback_prefs";
 
 window.settings = {
   id: "settings-screen",
   isDetails: false,
+  defaultPlaybackPrefs: {
+    autoSkipIntro: false,
+    autoSkipCredits: false,
+    autoSkipRecap: false,
+    autoPlayNext: true,
+    showSkipButton: true,
+  },
+  playbackToggleDefs: [
+    {
+      key: "autoSkipIntro",
+      title: "Auto-Skip Intro",
+      desc: "Automatically skip opening theme sequences after a brief countdown",
+    },
+    {
+      key: "autoSkipCredits",
+      title: "Auto-Skip Credits",
+      desc: "Automatically skip ending credits after a brief countdown",
+    },
+    {
+      key: "autoSkipRecap",
+      title: "Auto-Skip Recap",
+      desc: "Automatically skip previous-episode recap segments after a brief countdown",
+    },
+    {
+      key: "autoPlayNext",
+      title: "Auto-Play Next Episode",
+      desc: "Automatically start the next episode when the current episode finishes",
+    },
+    {
+      key: "showSkipButton",
+      title: "Show Skip Buttons",
+      desc: "Display on-screen Skip Intro, Skip Recap, and Skip Credits buttons during playback",
+    },
+  ],
+  getPlaybackPrefs: function () {
+    var base = Object.assign({}, settings.defaultPlaybackPrefs);
+    try {
+      var raw = window.localStorage.getItem(PLAYBACK_PREFS_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          Object.keys(base).forEach(function (k) {
+            if (typeof parsed[k] === "boolean") {
+              base[k] = parsed[k];
+            }
+          });
+        }
+      }
+    } catch (e) {}
+    return base;
+  },
+  setPlaybackPref: function (key, val) {
+    var prefs = settings.getPlaybackPrefs();
+    prefs[key] = Boolean(val);
+    try {
+      window.localStorage.setItem(PLAYBACK_PREFS_KEY, JSON.stringify(prefs));
+    } catch (e) {}
+    return prefs;
+  },
+  togglePlaybackPref: function (key) {
+    var prefs = settings.getPlaybackPrefs();
+    return settings.setPlaybackPref(key, !prefs[key]);
+  },
   options: [
     {
-      id: "applicationlang",
-      label: "settings.menu.application_lang",
+      id: "playback",
+      label: "settings.menu.playback",
+      title: "Playback & Auto-Skip",
+      type: "toggles",
+    },
+    {
+      id: "videoquality",
+      label: "settings.menu.video_quality",
       type: "list",
     },
     {
@@ -20,8 +90,8 @@ window.settings = {
       type: "list",
     },
     {
-      id: "videoquality",
-      label: "settings.menu.video_quality",
+      id: "applicationlang",
+      label: "settings.menu.application_lang",
       type: "list",
     },
     {
@@ -86,38 +156,51 @@ window.settings = {
         break;
       case tvKey.KEY_UP:
         if (settings.isDetails) {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.active`));
-          settings.details[settings.options[current].type].move(-1);
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.active`));
+          if (current < 0) current = options.index($(`#settings-menu li.selected`));
+          if (current >= 0) {
+            settings.details[settings.options[current].type].move(-1);
+          }
         } else {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.selected`));
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.selected`));
 
           options.removeClass("selected");
           var newCurrent = current > 0 ? current - 1 : current;
           options.eq(newCurrent).addClass("selected");
+          if (options[newCurrent] && options[newCurrent].scrollIntoView) {
+            options[newCurrent].scrollIntoView({ block: "nearest" });
+          }
           settings.details.show(settings.options[newCurrent]);
         }
         break;
       case tvKey.KEY_DOWN:
         if (settings.isDetails) {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.active`));
-          settings.details[settings.options[current].type].move(1);
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.active`));
+          if (current < 0) current = options.index($(`#settings-menu li.selected`));
+          if (current >= 0) {
+            settings.details[settings.options[current].type].move(1);
+          }
         } else {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.selected`));
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.selected`));
 
           options.removeClass("selected");
           var newCurrent = current < options.length - 1 ? current + 1 : current;
           options.eq(newCurrent).addClass("selected");
+          if (options[newCurrent] && options[newCurrent].scrollIntoView) {
+            options[newCurrent].scrollIntoView({ block: "nearest" });
+          }
           settings.details.show(settings.options[newCurrent]);
         }
         break;
       case tvKey.KEY_LEFT:
         if (settings.isDetails) {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.active`));
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.active`));
+          if (current < 0) current = options.index($(`#settings-menu li.selected`));
           options.removeClass("active");
           options.eq(current).addClass("selected");
           settings.details[settings.options[current].type].move(false);
@@ -128,8 +211,8 @@ window.settings = {
         break;
       case tvKey.KEY_RIGHT:
         if (!settings.isDetails) {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.selected`));
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.selected`));
           options.removeClass("selected");
           options.eq(current).addClass("active");
 
@@ -140,11 +223,13 @@ window.settings = {
       case tvKey.KEY_ENTER:
       case tvKey.KEY_PANEL_ENTER:
         if (settings.isDetails) {
-          var options = $(`.options li`);
-          var current = options.index($(`.options li.active`));
-
-          var element = settings.options[current];
-          settings.details[element.type].action(element.id);
+          var options = $(`#settings-menu li`);
+          var current = options.index($(`#settings-menu li.active`));
+          if (current < 0) current = options.index($(`#settings-menu li.selected`));
+          if (current >= 0) {
+            var element = settings.options[current];
+            settings.details[element.type].action(element.id);
+          }
         }
         break;
     }
@@ -156,16 +241,18 @@ window.settings = {
     return settings.options
       .map(
         (option, index) =>
-          `<li class="${index === selected ? className : ""}">${translate.go(
-            option.label
-          )}</li>`
+          `<li class="${index === selected ? className : ""}">${
+            option.title || translate.go(option.label)
+          }</li>`
       )
       .join("");
   },
 
   resetLang: function () {
-    var options = $(`.options li`);
-    var current = options.index($(`.options li.active`));
+    var options = $(`#settings-menu li`);
+    var current = options.index($(`#settings-menu li.active`));
+    if (current < 0) current = options.index($(`#settings-menu li.selected`));
+    if (current < 0) current = 0;
 
     $("#settings-menu").html(settings.generateMenu(current));
 
@@ -175,9 +262,78 @@ window.settings = {
 
   details: {
     show: function (element) {
+      var detailsEl = document.getElementById("settings-details");
+      if (detailsEl) {
+        detailsEl.scrollTop = 0;
+      }
       $("#settings-details").html(
         settings.details[element.type].create(element.id)
       );
+      var activeLi = detailsEl && detailsEl.querySelector("li.active");
+      if (activeLi && activeLi.scrollIntoView) {
+        activeLi.scrollIntoView({ block: "nearest" });
+      }
+    },
+
+    toggles: {
+      create: function () {
+        var prefs = settings.getPlaybackPrefs();
+        return (
+          '<ul class="list-active playback-toggles-list" id="list-details-offset">' +
+          settings.playbackToggleDefs
+            .map(function (def) {
+              var isOn = Boolean(prefs[def.key]);
+              return `
+                <li class="playback-toggle-item ${isOn ? " toggle-on" : ""}" data-pref-key="${def.key}">
+                  <div class="toggle-text">
+                    <div class="toggle-title">${def.title}</div>
+                    <div class="toggle-desc">${def.desc}</div>
+                  </div>
+                  <div class="toggle-switch ${isOn ? "on" : "off"}">
+                    <span class="toggle-knob"></span>
+                    <span class="toggle-state-label">${isOn ? "ON" : "OFF"}</span>
+                  </div>
+                </li>`;
+            })
+            .join("") +
+          "</ul>"
+        );
+      },
+
+      action: function () {
+        var items = $(`#settings-details li.playback-toggle-item`);
+        var selected = items.filter(".selected");
+        if (!selected.length) return;
+        var key = selected.attr("data-pref-key");
+        if (!key) return;
+        var prefs = settings.togglePlaybackPref(key);
+        var isOn = Boolean(prefs[key]);
+        selected.toggleClass("toggle-on", isOn);
+        var sw = selected.find(".toggle-switch");
+        sw.removeClass("on off").addClass(isOn ? "on" : "off");
+        selected.find(".toggle-state-label").text(isOn ? "ON" : "OFF");
+      },
+
+      move: function (index) {
+        var options = $(`#settings-details li.playback-toggle-item`);
+        if (index === false) {
+          options.removeClass("selected");
+          return;
+        }
+        var currentSelected = options.index(options.filter(".selected"));
+        var current = currentSelected >= 0 ? currentSelected : 0;
+        options.removeClass("selected");
+        var newCurrent = current;
+        if (index < 0) {
+          newCurrent = current > 0 ? current + index : 0;
+        } else if (index > 0) {
+          newCurrent = current + index < options.length ? current + index : options.length - 1;
+        }
+        options.eq(newCurrent).addClass("selected");
+        if (options[newCurrent] && options[newCurrent].scrollIntoView) {
+          options[newCurrent].scrollIntoView({ block: "nearest" });
+        }
+      },
     },
 
     list: {
@@ -227,21 +383,19 @@ window.settings = {
       },
 
       adjust: function (index, size, elementId) {
-        var marginTop = 0;
-        if (size > 6 && index > 5) {
-          if (index > size - 2) {
-            marginTop = -((size - 6) * 104);
-          } else {
-            marginTop = -((index - 5) * 104);
-          }
+        var el = document.getElementById(elementId);
+        if (!el) return;
+        el.style.marginTop = "0px";
+        var items = el.querySelectorAll("li");
+        if (items[index] && items[index].scrollIntoView) {
+          items[index].scrollIntoView({ block: "nearest" });
         }
-
-        document.getElementById(elementId).style.marginTop = `${marginTop}px`;
       },
 
       action: function (id) {
         var optionsMenu = $(`#settings-details li`);
         var index = optionsMenu.index($(`#settings-details li.selected`));
+        if (index < 0) return;
 
         console.log(id, index);
         switch (id) {
@@ -344,6 +498,7 @@ window.settings = {
           currentSelected >= 0
             ? currentSelected
             : options.index($(`#settings-details li.active`));
+        if (current < 0) current = 0;
 
         options.removeClass("selected");
         if (index < 0) {
@@ -364,22 +519,65 @@ window.settings = {
 
     html: {
       create: function (id) {
+        var ver =
+          (typeof changelog !== "undefined" &&
+            changelog.data &&
+            changelog.data.version) ||
+          "v2.0.0";
         return `
-        <div style="color: #fff;font-size: 23px;line-height: 51px;text-align: right;padding: 38px 0;position: absolute;right: 0;bottom: 0;">
-          <div>Crunchyroll unofficial app.</div>
-          <div>Ported to Linux by aarron-lee</div>
-          <div>Github: https://github.com/aarron-lee/crunchyroll-linux</div>
+        <div id="about-panel">
+          <div class="about-header">
+            <div class="about-title-block">
+              <div class="about-app-name">Crunchyroll Ubuntu Desktop</div>
+              <div class="about-tagline">Unofficial Linux Desktop &amp; HTPC Client with Smart Auto-PiP</div>
+            </div>
+            <span class="about-version-badge">${ver}</span>
+          </div>
 
-          <div>App Icon from Enamo Studios:</div>
-          <div>https://www.flaticon.com/free-icons/crunchyroll</div>
+          <div class="about-section">
+            <div class="about-section-title">Developer &amp; Links</div>
+            <div class="about-author-row">
+              <i class="fa-solid fa-code"></i>
+              <span>Built &amp; Maintained by <strong>Pulkit Mundra</strong></span>
+            </div>
+            <div class="about-links">
+              <a class="about-link-pill" data-external-url="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop">
+                <i class="fa-solid fa-code-branch"></i>
+                <span>github.com/pulkitmundra/crunchyroll-ubuntu-desktop</span>
+              </a>
+              <a class="about-link-pill" data-external-url="https://pulkit-mundra-portfolio.vercel.app">
+                <i class="fa-solid fa-globe"></i>
+                <span>pulkit-mundra-portfolio.vercel.app</span>
+              </a>
+              <a class="about-link-pill" data-external-url="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues">
+                <i class="fa-solid fa-bug"></i>
+                <span>Report an Issue / Request Feature</span>
+              </a>
+            </div>
+          </div>
 
-          <div>Original app from:</div>
-          <div>Github: https://github.com/jhassan8/crunchyroll-tizen</div>
-          <div>Version: ${session.storage.version}</div>
+          <div class="about-section">
+            <div class="about-section-title">Desktop Shortcuts</div>
+            <div class="about-shortcuts-grid">
+              <div class="shortcut-item"><kbd>F9</kbd><span>Mini Floating Player</span></div>
+              <div class="shortcut-item"><kbd>F10</kbd><span>Smart Auto-PiP Pin</span></div>
+              <div class="shortcut-item"><kbd>F11 / F</kbd><span>Fullscreen</span></div>
+              <div class="shortcut-item"><kbd>Space</kbd><span>Play / Pause</span></div>
+              <div class="shortcut-item"><kbd>J / L</kbd><span>Seek -10s / +10s</span></div>
+              <div class="shortcut-item"><kbd>M / Wheel</kbd><span>Mute &amp; Volume</span></div>
+              <div class="shortcut-item"><kbd>[ / ]</kbd><span>Playback Speed</span></div>
+              <div class="shortcut-item"><kbd>C / E / S / Z</kbd><span>Subs / Eps / Skip / Aspect</span></div>
+            </div>
+          </div>
+
+          <div class="about-credits">
+            Based on <span class="about-credit-link" data-external-url="https://github.com/jhassan8/crunchyroll-tizen">jhassan8/crunchyroll-tizen</span> &amp; <span class="about-credit-link" data-external-url="https://github.com/aarron-lee/crunchyroll-linux">aarron-lee/crunchyroll-linux</span> | Icon by <span class="about-credit-link" data-external-url="https://www.flaticon.com/free-icons/crunchyroll">Enamo Studios</span>
+          </div>
         </div>`;
       },
 
       move: function () {},
+      action: function () {},
     },
   },
 };

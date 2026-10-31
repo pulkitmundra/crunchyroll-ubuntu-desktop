@@ -22,6 +22,7 @@ const setupGamepadEventListener = () => {
     // set default value, which is ENABLE
     window.localStorage.setItem("controllerSupport", "ENABLE");
     window.localStorage.setItem("controllerSupportInitialized", "1");
+    enabled = true;
   }
 
   const handleController = (event) => {

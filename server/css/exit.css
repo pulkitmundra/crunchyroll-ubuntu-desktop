@@ -1,11 +1,13 @@
 #exit-screen {
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
+  background: rgba(6, 6, 10, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 9000;
+  z-index: 9800;
 }
 
 #exit-screen .content {
@@ -18,46 +20,63 @@
 }
 
 #exit-screen .window {
-  width: 28vw;
-  min-width: 420px;
-  min-height: 20vh;
-  background-color: #111;
-  border: 2px solid rgba(244, 117, 33, 0.7);
-  border-radius: 10px;
-  padding: 28px 24px;
+  width: 420px;
+  max-width: 90vw;
+  background: rgba(16, 16, 24, 0.94);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(244, 117, 33, 0.65);
+  border-radius: 20px;
+  padding: 32px 28px 26px 28px;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
-  gap: 20px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.85);
 }
 
 #exit-screen .text {
-  color: #fff;
+  color: #ffffff;
   text-align: center;
-  font-size: 2rem;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
 }
 
 #exit-screen .buttons {
-  padding: 5px;
   display: flex;
-  justify-content: space-evenly;
-  margin-top: 10px;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 4px;
 }
 
 #exit-screen .button {
-  background: rgba(255, 255, 255, 0.5);
-  color: #000;
-  width: 40%;
-  border-radius: 5px;
-  padding: 10px 20px;
+  flex: 1 1 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  padding: 12px 20px;
   text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.16s ease;
 }
 
 #exit-screen .button.selected,
 #exit-screen .button:hover {
-  background: #f47521;
+  background: linear-gradient(135deg, #f47521 0%, #ff8a3d 100%);
+  border-color: #ff9d5c;
+  color: #0b0b0f;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(244, 117, 33, 0.38);
 }

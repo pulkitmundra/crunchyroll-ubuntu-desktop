@@ -1,7 +1,9 @@
 #settings-screen {
   width: 100%;
   height: 100%;
-  background: #000;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(244, 117, 33, 0.09) 0%, transparent 45%),
+    #08080c;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -11,81 +13,444 @@
 #settings-screen .content {
   display: flex;
   justify-content: center;
-  height: 65vh;
-  min-width: 70vw;
+  height: 80vh;
+  width: 78%;
+  max-width: 1120px;
+  padding: 28px;
+  margin: 36px auto 0 auto;
+  background: rgba(14, 14, 20, 0.88);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(244, 117, 33, 0.45);
+  border-radius: 22px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75);
+  box-sizing: border-box;
 }
 
 #settings-screen .content .container {
-  padding: 0 70px;
+  padding: 4px 24px 4px 32px;
   flex: 1;
   position: relative;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 #settings-screen .content .container-mid {
-  padding: 0 50px;
-  width: 40%;
+  padding: 4px 28px 4px 12px;
+  width: 34%;
+  height: 100%;
   position: relative;
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#settings-screen .content .container-mid::-webkit-scrollbar {
+  width: 4px;
+}
+
+#settings-screen .content .container-mid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#settings-screen .content .container-mid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
 }
 
 #settings-screen .content .container-mid::after {
   content: "";
-  height: 100%;
-  border-left: 2px solid rgba(256, 256, 256, 0.3);
+  height: 92%;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
   position: absolute;
   right: 0;
   top: 0;
   bottom: 0;
   margin: auto;
+  pointer-events: none;
 }
 
 #settings-screen .content .container-mid ul,
 #settings-screen .content .container ul {
-  padding: 0;
+  padding: 4px 0;
+  list-style: none;
+  margin: 0;
+  width: 100%;
+  height: auto;
 }
 
 #settings-screen .content .container-mid ul li,
 #settings-screen .content .container ul li {
-  color: #fff;
-  font-size: 3vh;
-  padding: 15px 25px;
-  opacity: 0.5;
-  margin: 30px 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0 20px;
+  margin: 10px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  height: 74px;
-  border: 2px solid transparent;
+  height: 52px;
+  min-height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#settings-screen .content .container-mid ul li:hover,
+#settings-screen .content .container ul li:hover {
+  color: #ffffff;
+  background: rgba(244, 117, 33, 0.09);
+  border-color: rgba(244, 117, 33, 0.48);
+  transform: translateX(3px);
 }
 
 #settings-screen .content .container-mid ul li.selected,
 #settings-screen .content .container ul li.selected {
-  border: 2px solid rgba(244, 130, 33, 0.9);
-  opacity: 1;
+  border-color: #f47521;
+  background: rgba(244, 117, 33, 0.15);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
 #settings-screen .content .container-mid ul li.active,
 #settings-screen .content .container ul li.active {
-  opacity: 1;
+  color: #ffffff;
+  font-weight: 700;
   position: relative;
-  padding-left: 50px;
+  padding-left: 42px;
+  border-color: rgba(244, 117, 33, 0.45);
 }
 
 #settings-screen .content .container-mid ul li.active::after,
 #settings-screen .content .container ul li.active::after {
   content: "";
   position: absolute;
-  left: 26px;
-  top: 24px;
-  border-left: 10px solid white;
-  border-bottom: 10px solid transparent;
-  border-top: 10px solid transparent;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f47521;
+  box-shadow: 0 0 8px rgba(244, 117, 33, 0.85);
 }
 
 #settings-screen .content #settings-details {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+}
+
+#settings-screen .content #settings-details::-webkit-scrollbar {
+  width: 6px;
+}
+
+#settings-screen .content #settings-details::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+  margin: 8px 0;
+}
+
+#settings-screen .content #settings-details::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+#settings-screen .content #settings-details::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 117, 33, 0.8);
 }
 
 #settings-screen .content .container .list-active {
-  height: 100%;
+  height: auto;
+  width: 100%;
   margin: 0;
+  padding: 4px 0;
+  display: block;
 }
+
+/* ABOUT PANEL */
+
+#about-panel {
+  background: rgba(20, 20, 28, 0.88);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(244, 117, 33, 0.55);
+  border-radius: 20px;
+  padding: 28px 34px;
+  color: #fff;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: auto 0;
+  flex-shrink: 0;
+}
+
+#about-panel .about-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#about-panel .about-app-name {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+#about-panel .about-tagline {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 4px;
+}
+
+#about-panel .about-version-badge {
+  background: linear-gradient(90deg, #e8630a 0%, #f47521 100%);
+  color: #000;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(244, 117, 33, 0.38);
+}
+
+#about-panel .about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#about-panel .about-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #f47521;
+}
+
+#about-panel .about-author-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+#about-panel .about-author-row i {
+  color: #f47521;
+}
+
+#about-panel .about-author-row strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+#about-panel .about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+#about-panel .about-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    color 0.16s ease;
+}
+
+#about-panel .about-link-pill i {
+  color: #f47521;
+  font-size: 16px;
+}
+
+#about-panel .about-link-pill:hover {
+  background: rgba(244, 117, 33, 0.16);
+  border-color: #f47521;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+#about-panel .about-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+#about-panel .shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+#about-panel .shortcut-item kbd {
+  background: rgba(244, 117, 33, 0.16);
+  border: 1px solid rgba(244, 117, 33, 0.45);
+  color: #ffb078;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  min-width: 78px;
+  text-align: center;
+}
+
+#about-panel .about-credits {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+}
+
+#about-panel .about-credit-link {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: underline;
+  text-decoration-color: rgba(244, 117, 33, 0.6);
+  cursor: pointer;
+}
+
+#about-panel .about-credit-link:hover {
+  color: #f47521;
+}
+
+/* ================================================================
+   Playback & Auto-Skip Toggle Switches in Settings
+   ================================================================ */
+#settings-screen .content .container ul.playback-toggles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 10px;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item {
+  height: auto;
+  min-height: 78px;
+  margin: 0;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  opacity: 0.9;
+  cursor: pointer;
+  white-space: normal;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item:hover,
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item.selected {
+  opacity: 1;
+  background: rgba(244, 117, 33, 0.1);
+  border-color: rgba(244, 117, 33, 0.85);
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item.toggle-on {
+  border-color: rgba(244, 117, 33, 0.45);
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.35;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  min-width: 78px;
+  justify-content: space-between;
+  flex-shrink: 0;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-switch.on {
+  background: rgba(244, 117, 33, 0.24);
+  border-color: #f47521;
+  flex-direction: row-reverse;
+  padding: 5px 8px 5px 12px;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-switch.on .toggle-knob {
+  background: #f47521;
+  box-shadow: 0 0 10px rgba(244, 117, 33, 0.85);
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-state-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+#settings-screen .content .container ul.playback-toggles-list li.playback-toggle-item .toggle-switch.on .toggle-state-label {
+  color: #ffb84d;
+}
+

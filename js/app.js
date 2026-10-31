@@ -18,45 +18,262 @@ function setupFloatingToolbar() {
   dock.innerHTML =
     '<div id="dock-handle" title="Hover here for window controls"></div>' +
     '<div id="floating-toolbar">' +
-    '<button id="btn-nav-back" tabindex="-1" class="floating-btn" title="Back (Esc or Right-Click)">' +
-    '<i class="fa-solid fa-arrow-left"></i> <span>Back</span>' +
-    "</button>" +
     '<button id="btn-nav-menu" tabindex="-1" class="floating-btn" title="Toggle Menu">' +
-    '<i class="fa-solid fa-bars"></i> <span>Menu</span>' +
+    '<i class="fa-solid fa-bars"></i><span>Menu</span>' +
     "</button>" +
-    '<button id="btn-mini-float" tabindex="-1" class="floating-btn" title="Shortcut: F9 or Ctrl+M">' +
-    '<i class="fa-solid fa-clone"></i> <span id="lbl-mini-float">Mini Float (F9)</span>' +
+    '<span class="floating-divider" aria-hidden="true"></span>' +
+    '<button id="btn-mini-float" tabindex="-1" class="floating-btn" title="Mini Floating Player (F9 or Ctrl+M)">' +
+    '<i class="fa-solid fa-clone"></i><span id="lbl-mini-float">Mini Float</span><kbd class="floating-kbd">F9</kbd>' +
     "</button>" +
-    '<button id="btn-pin-top" tabindex="-1" class="floating-btn" title="Shortcut: F10 or Ctrl+T">' +
-    '<i class="fa-solid fa-thumbtack"></i> <span id="lbl-pin-top">Pin on Top (F10)</span>' +
+    '<button id="btn-pin-top" tabindex="-1" class="floating-btn" title="Smart Auto-PiP Pin on Top (F10 or Ctrl+T)">' +
+    '<i class="fa-solid fa-thumbtack"></i><span id="lbl-pin-top">Pin on Top</span><kbd class="floating-kbd">F10</kbd>' +
     "</button>" +
     "</div>";
   document.body.appendChild(dock);
 
-  var btnBack = document.getElementById("btn-nav-back");
+  var screenBackBtn = document.createElement("button");
+  screenBackBtn.id = "screen-back-btn";
+  screenBackBtn.type = "button";
+  screenBackBtn.tabIndex = -1;
+  screenBackBtn.title = "Go Back (Backspace or Esc)";
+  screenBackBtn.innerHTML =
+    '<i class="fa-solid fa-arrow-left"></i><span id="screen-back-label">Back</span>';
+  document.body.appendChild(screenBackBtn);
+
+  function goHomeFromSubscreen() {
+    if (typeof menu !== "undefined" && document.getElementById(menu.id)) {
+      var allMenuOptions = $("#menu-screen .option");
+      if (allMenuOptions.length > 2) {
+        allMenuOptions.removeClass("focus");
+        allMenuOptions.eq(2).addClass("focus");
+        menu.keyDown({ keyCode: tvKey.KEY_ENTER });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function refreshSlickLayouts() {
+    var hRows = document.querySelectorAll(
+      "#home-screen .row-content, #mylist-screen .row-content"
+    );
+    for (var i = 0; i < hRows.length; i++) {
+      var el = hRows[i];
+      if (el && el.slick && el.offsetParent !== null) {
+        var tr = el.querySelector(".slick-track");
+        var savedX = tr && typeof tr._posX === "number" ? tr._posX : null;
+        var savedSlide = el.slick.currentSlide || 0;
+        el.slick.setPosition();
+        el.slick.currentSlide = savedSlide;
+        if (tr && savedX !== null && savedX > 0) {
+          tr._posX = savedX;
+          tr.style.transition = "none";
+          tr.style.transform = "translate3d(" + -savedX + "px, 0px, 0px)";
+        }
+      }
+    }
+    var vLists = document.querySelectorAll(
+      "#home-screen .rows, .episodes .episodes-list"
+    );
+    for (var j = 0; j < vLists.length; j++) {
+      var vEl = vLists[j];
+      if (vEl && vEl.slick && vEl.offsetParent !== null) {
+        var vTr = vEl.querySelector(":scope > .slick-list > .slick-track") || vEl.querySelector(".slick-track");
+        var savedY = vTr && typeof vTr._posY === "number" ? vTr._posY : null;
+        var savedVSlide = vEl.slick.currentSlide || 0;
+        vEl.slick.setPosition();
+        vEl.slick.currentSlide = savedVSlide;
+        if (vTr && savedY !== null && savedY > 0) {
+          vTr._posY = savedY;
+          vTr.style.transition = "none";
+          vTr.style.transform = "translate3d(0px, " + -savedY + "px, 0px)";
+        }
+      }
+    }
+  }
+
+  window.refreshSlickLayouts = refreshSlickLayouts;
+
+  function updateBackBtnVisibility() {
+    if (!screenBackBtn) return;
+    var st =
+      typeof main !== "undefined" && typeof main.resolveState === "function"
+        ? main.resolveState()
+        : typeof main !== "undefined"
+        ? main.state
+        : "";
+    var labelEl = document.getElementById("screen-back-label");
+    var show = false;
+    var hasSidebar = false;
+    var isVideo = false;
+    var isSettings = false;
+    var labelText = "Back";
+
+    if (
+      st === "login-screen" ||
+      st === "profiles-screen" ||
+      st === "loading-screen" ||
+      !st
+    ) {
+      show = false;
+    } else if (st === "video-screen") {
+      show = true;
+      isVideo = true;
+      labelText = "Back";
+    } else if (st === "home_episodes-screen" || st === "home_details-screen") {
+      show = true;
+      hasSidebar = true;
+      labelText = "Back";
+    } else if (st === "home-screen") {
+      if (typeof home !== "undefined" && home.fromCategory && home.fromCategory.state) {
+        show = true;
+        hasSidebar = true;
+        labelText = "Categories";
+      } else {
+        show = false;
+      }
+    } else if (st === "settings-screen") {
+      show = true;
+      hasSidebar = false;
+      isSettings = true;
+      labelText = "Back";
+    } else if (
+      st === "search-screen" ||
+      st === "browse-screen" ||
+      st === "mylist-screen" ||
+      st === "history-screen"
+    ) {
+      show = true;
+      hasSidebar = true;
+      labelText = "Back";
+    }
+
+    if (labelEl && labelEl.textContent !== labelText) {
+      labelEl.textContent = labelText;
+    }
+    screenBackBtn.classList.toggle("visible", show);
+    screenBackBtn.classList.toggle("with-sidebar", hasSidebar);
+    screenBackBtn.classList.toggle("on-video", isVideo);
+    screenBackBtn.classList.toggle("on-settings", isSettings);
+  }
+
+  window.updateBackBtnVisibility = updateBackBtnVisibility;
+
+  function navigateBack() {
+    if (typeof main !== "undefined" && typeof main.resolveState === "function") {
+      main.resolveState();
+    }
+    if (typeof exit !== "undefined" && document.getElementById(exit.id)) {
+      exit.destroy();
+      setTimeout(updateBackBtnVisibility, 20);
+      return;
+    }
+    if (typeof changelog !== "undefined" && document.getElementById(changelog.id)) {
+      changelog.destroy();
+      setTimeout(updateBackBtnVisibility, 20);
+      return;
+    }
+    if (typeof keyboard !== "undefined" && document.getElementById(keyboard.id)) {
+      keyboard.destroy();
+      setTimeout(updateBackBtnVisibility, 20);
+      return;
+    }
+    if (typeof menu !== "undefined" && menu.isOpen) {
+      menu.close();
+      setTimeout(updateBackBtnVisibility, 20);
+      return;
+    }
+    if (
+      typeof home_details !== "undefined" &&
+      main.state === home_details.id &&
+      home_details.listModalOpen
+    ) {
+      home_details.closeListManager();
+      setTimeout(updateBackBtnVisibility, 20);
+      return;
+    }
+    if (
+      typeof main !== "undefined" &&
+      (main.state === "search-screen" ||
+        main.state === "browse-screen" ||
+        main.state === "mylist-screen" ||
+        main.state === "history-screen" ||
+        main.state === "settings-screen")
+    ) {
+      if (goHomeFromSubscreen()) {
+        setTimeout(updateBackBtnVisibility, 30);
+        return;
+      }
+    }
+    sendKey(tvKey.KEY_ESCAPE);
+    setTimeout(updateBackBtnVisibility, 30);
+  }
+
+  window.navigateBack = navigateBack;
+
+  screenBackBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    this.blur();
+    navigateBack();
+  });
+
   var btnMenu = document.getElementById("btn-nav-menu");
   var btnMini = document.getElementById("btn-mini-float");
   var btnPin = document.getElementById("btn-pin-top");
   var lblMini = document.getElementById("lbl-mini-float");
   var lblPin = document.getElementById("lbl-pin-top");
 
-  btnBack.addEventListener("click", function (e) {
-    e.stopPropagation();
-    this.blur();
-    sendKey(tvKey.KEY_ESCAPE);
-  });
-
   btnMenu.addEventListener("click", function (e) {
     e.stopPropagation();
     this.blur();
+    if (
+      (typeof login !== "undefined" && document.getElementById(login.id)) ||
+      (typeof profilesScreen !== "undefined" &&
+        document.getElementById(profilesScreen.id)) ||
+      (typeof loading !== "undefined" &&
+        document.getElementById(loading.id) &&
+        !document.getElementById(loading.id).classList.contains("flat")) ||
+      typeof session === "undefined" ||
+      !session.storage ||
+      !session.storage.access_token
+    ) {
+      return;
+    }
     if (typeof exit !== "undefined" && document.getElementById(exit.id)) {
       exit.destroy();
+    }
+    if (typeof changelog !== "undefined" && document.getElementById(changelog.id)) {
+      changelog.destroy();
     }
     if (typeof keyboard !== "undefined" && document.getElementById(keyboard.id)) {
       keyboard.destroy();
     }
+    if (
+      typeof home_details !== "undefined" &&
+      home_details.listModalOpen &&
+      typeof home_details.closeListManager === "function"
+    ) {
+      home_details.closeListManager();
+    }
+    if (typeof video !== "undefined" && document.getElementById(video.id)) {
+      if (video.episodesDrawer && video.episodesDrawer.open) {
+        video.closeEpisodes(true);
+      }
+      if (video.settings && video.settings.open) {
+        video.keyDown({ keyCode: tvKey.KEY_ESCAPE });
+      }
+      if (video.speed && video.speed.state) {
+        video.hidePlaySpeed();
+      }
+    }
     if (typeof menu !== "undefined") {
-      if (!document.getElementById(menu.id) && typeof session !== "undefined" && session.storage && session.storage.account) {
+      if (
+        !document.getElementById(menu.id) &&
+        typeof session !== "undefined" &&
+        session.storage &&
+        session.storage.access_token &&
+        session.storage.account
+      ) {
         menu.init();
       }
       if (document.getElementById(menu.id)) {
@@ -69,15 +286,38 @@ function setupFloatingToolbar() {
     }
   });
 
+  var lastKnownWindowState = null;
+
   function checkCompactWindow(state) {
-    var isSmall =
-      (state && (state.isCompact || state.isMiniPlayer)) ||
-      (window.outerWidth > 0 && window.outerWidth < 1000) ||
-      window.devicePixelRatio < 0.65;
+    if (state && typeof state === "object") {
+      lastKnownWindowState = state;
+    }
+    var st = lastKnownWindowState;
+    var ow = window.outerWidth || 1920;
+    var oh = window.outerHeight || 1080;
+    var rawScale =
+      st && typeof st.scale === "number" && st.scale > 0
+        ? st.scale
+        : Math.max(0.15, Math.min(ow / 1920, oh / 1080));
+    var isSmall = Boolean(
+      (st && (st.isCompact || st.isMiniPlayer)) ||
+        (ow > 0 && ow <= 720) ||
+        (oh > 0 && oh <= 420)
+    );
     if (isSmall) {
       document.body.classList.add("compact-window");
     } else {
       document.body.classList.remove("compact-window");
+    }
+    var uiScale = 1;
+    if (rawScale < 0.85) {
+      uiScale = Math.min(1.85, Math.max(1, Math.pow(rawScale, -0.42)));
+    }
+    if (document.documentElement) {
+      document.documentElement.style.setProperty(
+        "--ui-scale",
+        uiScale.toFixed(3)
+      );
     }
   }
 
@@ -86,6 +326,16 @@ function setupFloatingToolbar() {
       typeof video !== "undefined" &&
       (Boolean(document.getElementById(video.id)) ||
         (typeof main !== "undefined" && main.state === video.id))
+    );
+  }
+
+  function isVideoDrawerOpen() {
+    return Boolean(
+      (typeof menu !== "undefined" && menu.isOpen) ||
+        (typeof exit !== "undefined" && Boolean(document.getElementById(exit.id))) ||
+        (typeof video !== "undefined" &&
+          (video.settings.open ||
+            (video.episodesDrawer && video.episodesDrawer.open)))
     );
   }
 
@@ -103,7 +353,7 @@ function setupFloatingToolbar() {
     }
     document.body.classList.remove("show-floating-toolbar");
     dock.classList.remove("expanded");
-    if (isVideoActive() && !video.settings.open) {
+    if (isVideoActive() && !isVideoDrawerOpen()) {
       document.body.classList.add("hide-cursor");
       video.hideOSD();
     }
@@ -117,21 +367,21 @@ function setupFloatingToolbar() {
     if (!state) return;
     if (state.isMiniPlayer) {
       btnMini.classList.add("active");
-      lblMini.textContent = "Exit Mini (F9)";
+      lblMini.textContent = "Exit Mini";
     } else {
       btnMini.classList.remove("active");
-      lblMini.textContent = "Mini Float (F9)";
+      lblMini.textContent = "Mini Float";
     }
 
     if (state.isPinned) {
       btnPin.classList.add("active");
-      lblPin.textContent = "Pinned on Top (F10)";
+      lblPin.textContent = "Pinned";
     } else {
       btnPin.classList.remove("active");
-      lblPin.textContent = "Pin on Top (F10)";
+      lblPin.textContent = "Pin on Top";
     }
 
-    if (isVideoActive() && !video.settings.open) {
+    if (isVideoActive() && !isVideoDrawerOpen()) {
       forceHideAllOverlays();
     }
   }
@@ -149,7 +399,7 @@ function setupFloatingToolbar() {
   window.addEventListener("resize", function () {
     lastResizeTime = Date.now();
     checkCompactWindow();
-    if (isVideoActive() && !video.settings.open) {
+    if (isVideoActive() && !isVideoDrawerOpen()) {
       scheduleUnifiedHide(350);
       if (video.timers && video.timers.osd) {
         clearTimeout(video.timers.osd.object);
@@ -157,6 +407,8 @@ function setupFloatingToolbar() {
           video.hideOSD();
         }, 350);
       }
+    } else {
+      setTimeout(refreshSlickLayouts, 80);
     }
   });
 
@@ -229,9 +481,9 @@ function setupFloatingToolbar() {
     // Expand the top-center dock only when cursor is near the top-center zone
     if (e && typeof e.clientY === "number" && typeof e.clientX === "number") {
       var w = window.innerWidth || 1920;
-      var maxY = document.body.classList.contains("compact-window") ? 130 : 75;
+      var maxY = document.body.classList.contains("compact-window") ? 240 : 75;
       var inTopCenter =
-        e.clientY < maxY && e.clientX > w * 0.25 && e.clientX < w * 0.75;
+        e.clientY < maxY && e.clientX > w * 0.2 && e.clientX < w * 0.8;
       if (inTopCenter) {
         dock.classList.add("expanded");
       } else if (!dock.matches(":hover")) {
@@ -239,11 +491,23 @@ function setupFloatingToolbar() {
       }
     }
 
-    if (isVideoActive() && !video.settings.open) {
+    if (isVideoActive() && !isVideoDrawerOpen()) {
       video.showOSD(Boolean(video.speed && video.speed.state));
     } else {
       scheduleUnifiedHide(2000);
     }
+    updateBackBtnVisibility();
+  }
+
+  if (typeof MutationObserver !== "undefined") {
+    var bodyObserver = new MutationObserver(function () {
+      updateBackBtnVisibility();
+    });
+    bodyObserver.observe(document.body, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 
   window.addEventListener("mousemove", onUserMouseActivity);
@@ -299,16 +563,19 @@ function getContentHeight(el) {
 function setupMouseSupport() {
   var videoClickTimer = null;
   var isDraggingProgress = false;
+  var isDraggingVolume = false;
+  var justFinishedScrubbing = false;
   var menuEnteredByMouse = false;
 
   function canHoverSidebarMenu() {
     if (typeof menu === "undefined") return false;
     var menuEl = document.getElementById(menu.id);
-    if (!menuEl || menuEl.offsetParent === null) return false;
+    if (!menuEl || window.getComputedStyle(menuEl).display === "none") return false;
     if (typeof exit !== "undefined" && document.getElementById(exit.id)) return false;
     if (typeof changelog !== "undefined" && document.getElementById(changelog.id)) return false;
     if (typeof keyboard !== "undefined" && document.getElementById(keyboard.id)) return false;
     if (typeof video !== "undefined" && document.getElementById(video.id)) return false;
+    if (document.getElementById("crunchylist-modal")) return false;
     if (
       document.body.classList.contains("home_details-screen") ||
       document.body.classList.contains("home_episodes-screen")
@@ -316,6 +583,99 @@ function setupMouseSupport() {
       return false;
     }
     return true;
+  }
+
+  function formatSeekTime(seconds, totalDuration) {
+    var sec = Math.max(0, Math.floor(seconds || 0));
+    var s = sec % 60;
+    var m = Math.floor((sec % 3600) / 60);
+    var h = Math.floor(sec / 3600);
+    var pad = function (n) {
+      return n < 10 ? "0" + n : "" + n;
+    };
+    if (h > 0 || (totalDuration && totalDuration >= 3600)) {
+      return pad(h) + ":" + pad(m) + ":" + pad(s);
+    }
+    return pad(m) + ":" + pad(s);
+  }
+
+  function updateProgressHover(barEl, clientX, active) {
+    var progressEl = barEl ? barEl.closest(".progress") : document.querySelector(".osd .progress");
+    var hoverEl = document.getElementById("seek-hover");
+    var tooltipEl = document.getElementById("seek-tooltip");
+    if (!active || !barEl) {
+      if (progressEl) progressEl.classList.remove("hover-active");
+      if (hoverEl) hoverEl.style.width = "0%";
+      if (tooltipEl) tooltipEl.classList.remove("visible");
+      return;
+    }
+    var rect = barEl.getBoundingClientRect();
+    if (!rect.width) return;
+    var ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    var pct = ratio * 100;
+    if (progressEl) progressEl.classList.add("hover-active");
+    if (hoverEl) hoverEl.style.width = pct + "%";
+    if (tooltipEl && typeof player !== "undefined") {
+      var dur = player.getDuration();
+      if (dur && dur > 0) {
+        tooltipEl.textContent = formatSeekTime(ratio * dur, dur);
+        var clampedPct = Math.max(3, Math.min(97, pct));
+        tooltipEl.style.left = clampedPct + "%";
+        tooltipEl.classList.add("visible");
+      }
+    }
+  }
+
+  function isPointInVolumeSliderZone(e) {
+    if (!e) return false;
+    if (e.target && e.target.closest && e.target.closest("#btn-volume-mute")) {
+      return false;
+    }
+    var osdVolEl = document.getElementById("osd-volume");
+    if (!osdVolEl) return false;
+    if (e.target && e.target.closest && e.target.closest("#osd-volume")) {
+      return true;
+    }
+    var rect = osdVolEl.getBoundingClientRect();
+    if (!rect.width) return false;
+    var muteBtn = document.getElementById("btn-volume-mute");
+    var minX = muteBtn ? muteBtn.getBoundingClientRect().right + 2 : rect.left + 28;
+    return (
+      e.clientX >= minX &&
+      e.clientX <= rect.right + 6 &&
+      e.clientY >= rect.top - 8 &&
+      e.clientY <= rect.bottom + 8
+    );
+  }
+
+  function setVolumeAtClientX(clientX) {
+    if (typeof player === "undefined" || typeof video === "undefined") return;
+    var volBarEl = document.getElementById("volume-bar");
+    if (!volBarEl) return;
+    var vRect = volBarEl.getBoundingClientRect();
+    if (!vRect.width) return;
+    var vRatio = Math.max(0, Math.min(1, (clientX - vRect.left) / vRect.width));
+    player.setVolume(vRatio);
+    video.showOSD();
+  }
+
+  function isPointInProgressHitZone(barEl, e) {
+    if (!barEl || !e) return false;
+    if (e.target && e.target.closest && e.target.closest("#osd-volume")) {
+      return false;
+    }
+    if (e.target && e.target.closest && e.target.closest(".osd .progress .bar")) {
+      return true;
+    }
+    var rect = barEl.getBoundingClientRect();
+    if (!rect.width) return false;
+    var centerY = rect.top + rect.height / 2;
+    var vPad = Math.max(24, rect.height * 2.5);
+    return (
+      e.clientX >= rect.left - 8 &&
+      e.clientX <= rect.right + 8 &&
+      Math.abs(e.clientY - centerY) <= vPad
+    );
   }
 
   // Allow clicking and dragging along the video progress bar to scrub smoothly
@@ -328,6 +688,7 @@ function setupMouseSupport() {
     if (dur && dur > 0) {
       player.forwardTo(ratio * dur);
       video.setPlayingTime();
+      updateProgressHover(barEl, clientX, true);
       video.showOSD();
     }
   }
@@ -338,11 +699,33 @@ function setupMouseSupport() {
       main.resolveState();
     }
     if (typeof video !== "undefined" && main.state === video.id) {
+      if (
+        typeof video.isAutoSkipping === "function" &&
+        video.isAutoSkipping() &&
+        e.target.closest("#top-center-dock") &&
+        !e.target.closest("#btn-nav-back")
+      ) {
+        video.abortAutoSkip();
+      }
       var osdEl = document.getElementById("osd");
       var osdVisible = !osdEl || osdEl.style.opacity == 1;
-      var barEl = osdVisible && e.target.closest(".osd .progress .bar");
-      if (barEl) {
+      if (osdVisible && isPointInVolumeSliderZone(e)) {
+        if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
+          video.abortAutoSkip();
+        }
+        isDraggingVolume = true;
+        document.body.classList.add("scrubbing-volume");
+        setVolumeAtClientX(e.clientX);
+        e.preventDefault();
+        return;
+      }
+      var barEl = osdVisible && document.querySelector(".osd .progress .bar");
+      if (barEl && isPointInProgressHitZone(barEl, e)) {
+        if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
+          video.abortAutoSkip();
+        }
         isDraggingProgress = true;
+        document.body.classList.add("scrubbing-progress");
         seekAtClientX(barEl, e.clientX);
         e.preventDefault();
       }
@@ -350,12 +733,33 @@ function setupMouseSupport() {
   });
 
   window.addEventListener("mousemove", function (e) {
+    if (isDraggingVolume) {
+      setVolumeAtClientX(e.clientX);
+      return;
+    }
+
     if (isDraggingProgress) {
       var barEl = document.querySelector(".osd .progress .bar");
       if (barEl) {
         seekAtClientX(barEl, e.clientX);
       }
       return;
+    }
+
+    if (
+      typeof video !== "undefined" &&
+      main.state === video.id &&
+      !video.settings.open &&
+      !(video.episodesDrawer && video.episodesDrawer.open)
+    ) {
+      var osdEl = document.getElementById("osd");
+      var osdVisible = !osdEl || osdEl.style.opacity == 1;
+      var hoverBarEl = osdVisible && document.querySelector(".osd .progress .bar");
+      if (hoverBarEl && isPointInProgressHitZone(hoverBarEl, e)) {
+        updateProgressHover(hoverBarEl, e.clientX, true);
+      } else {
+        updateProgressHover(hoverBarEl, 0, false);
+      }
     }
 
     // Open sidebar menu when cursor enters the left sidebar strip; close when cursor leaves the open drawer
@@ -367,7 +771,8 @@ function setupMouseSupport() {
           typeof e.clientX === "number" &&
           e.clientX <= 110 &&
           e.target &&
-          !e.target.closest("#top-center-dock")
+          !e.target.closest("#top-center-dock") &&
+          !e.target.closest("#screen-back-btn")
         ) {
           menu.open();
           menuEnteredByMouse = true;
@@ -379,18 +784,37 @@ function setupMouseSupport() {
     }
   });
 
-  window.addEventListener("mouseup", function () {
+  window.addEventListener("mouseup", function (e) {
+    if (isDraggingVolume) {
+      justFinishedScrubbing = true;
+      document.body.classList.remove("scrubbing-volume");
+      setTimeout(function () {
+        isDraggingVolume = false;
+        justFinishedScrubbing = false;
+      }, 60);
+    }
     if (isDraggingProgress) {
+      justFinishedScrubbing = true;
+      document.body.classList.remove("scrubbing-progress");
+      var barEl = document.querySelector(".osd .progress .bar");
+      if (barEl && !isPointInProgressHitZone(barEl, e)) {
+        updateProgressHover(barEl, 0, false);
+      }
       setTimeout(function () {
         isDraggingProgress = false;
-      }, 0);
+        justFinishedScrubbing = false;
+      }, 60);
     }
   });
 
-  // Right-click anywhere goes Back (Esc)
+  // Right-click anywhere goes Back
   window.addEventListener("contextmenu", function (e) {
     e.preventDefault();
-    sendKey(tvKey.KEY_ESCAPE);
+    if (typeof window.navigateBack === "function") {
+      window.navigateBack();
+    } else {
+      sendKey(tvKey.KEY_ESCAPE);
+    }
   });
 
   // Double-click toggles Fullscreen
@@ -405,6 +829,8 @@ function setupMouseSupport() {
       target.closest("#top-center-dock") ||
       target.closest("#exit-screen") ||
       target.closest("#changelog-modal") ||
+      target.closest("#crunchylist-modal") ||
+      target.closest("#player-episodes-slide") ||
       target.closest("#menu-screen") ||
       target.closest("button") ||
       target.closest("input") ||
@@ -475,7 +901,7 @@ function setupMouseSupport() {
     }
 
     // 3. Sidebar Menu (#menu-screen): open on hover over left sidebar, focus hovered option, close when leaving drawer
-    if (typeof menu !== "undefined" && canHoverSidebarMenu()) {
+    if (typeof menu !== "undefined" && (menu.isOpen || canHoverSidebarMenu())) {
       var inMenuContent = target.closest("#menu-screen .content");
       if (inMenuContent) {
         if (!menu.isOpen) {
@@ -500,7 +926,13 @@ function setupMouseSupport() {
 
     // 4. Video player settings & icons hover
     if (typeof video !== "undefined" && main.state === video.id) {
-      if (video.settings && video.settings.open) {
+      if (video.episodesDrawer && video.episodesDrawer.open) {
+        var epItem = target.closest("#player-episodes-list .player-ep-item");
+        if (epItem) {
+          $("#player-episodes-list .player-ep-item").removeClass("selected");
+          $(epItem).addClass("selected");
+        }
+      } else if (video.settings && video.settings.open) {
         var langOpt = target.closest("#languages-content .option");
         if (langOpt) {
           $("#languages-content .option").removeClass("selected");
@@ -520,6 +952,7 @@ function setupMouseSupport() {
 
     // 5. Anime Details buttons hover
     if (typeof home_details !== "undefined" && main.state === home_details.id) {
+      if (home_details.listModalOpen) return;
       var detailBtn = target.closest(".home_details-screen_buttons a");
       if (detailBtn) {
         $(".home_details-screen_buttons a").removeClass("selected");
@@ -582,8 +1015,16 @@ function setupMouseSupport() {
           allBrowse.eq(bIdx).addClass("focus");
           var cat =
             browse.data && browse.data.categories && browse.data.categories[bIdx];
-          if (cat && cat.images && cat.images.background && cat.images.background[4]) {
-            $("#browse-background").attr("src", cat.images.background[4].source);
+          var bgArr =
+            cat && cat.images && Array.isArray(cat.images.background)
+              ? cat.images.background
+              : [];
+          var bgSrc =
+            (bgArr[4] && bgArr[4].source) ||
+            (bgArr[bgArr.length - 1] && bgArr[bgArr.length - 1].source) ||
+            "";
+          if (bgSrc) {
+            $("#browse-background").attr("src", bgSrc);
           }
         }
       }
@@ -613,34 +1054,8 @@ function setupMouseSupport() {
       return;
     }
 
-    // 12. Settings screen hover: hovering left category previews its options on the right
+    // 12. Settings screen: submenus change strictly on click (CSS :hover handles visual hover state)
     if (typeof settings !== "undefined" && main.state === settings.id) {
-      var setMenuLi = target.closest("#settings-menu li");
-      if (setMenuLi) {
-        var allSetMenu = $("#settings-menu li");
-        var stIdx = allSetMenu.index(setMenuLi);
-        if (stIdx >= 0 && settings.options[stIdx]) {
-          var prevActiveIdx = allSetMenu.index($("#settings-menu li.active, #settings-menu li.selected"));
-          settings.isDetails = false;
-          allSetMenu.removeClass("selected active");
-          allSetMenu.eq(stIdx).addClass("selected");
-          if (prevActiveIdx !== stIdx) {
-            settings.details.show(settings.options[stIdx]);
-          }
-        }
-        return;
-      }
-      var setDetailLi = target.closest("#settings-details li");
-      if (setDetailLi) {
-        var allSetMenuForDetail = $("#settings-menu li");
-        if (!allSetMenuForDetail.filter(".active").length) {
-          allSetMenuForDetail.filter(".selected").addClass("active");
-        }
-        settings.isDetails = true;
-        $("#settings-details li").removeClass("selected");
-        $(setDetailLi).addClass("selected");
-        return;
-      }
       return;
     }
 
@@ -668,6 +1083,11 @@ function setupMouseSupport() {
           $("#generic-background").attr("src", mlDataItem.background);
           $("#generic-title").text(mlDataItem.title);
           $("#generic-description").text(mlDataItem.description);
+          $("#generic-meta-row").html(
+            typeof mapper !== "undefined" && mapper.formatMetaBadges
+              ? mapper.formatMetaBadges(mlDataItem)
+              : ""
+          );
         }
       }
       return;
@@ -706,14 +1126,15 @@ function setupMouseSupport() {
         var titleEl = $("#home-screen .details .info .title")[0];
         if (titleEl) {
           titleEl.innerText = item.title;
-          titleEl.style.fontSize =
-            titleEl.scrollHeight > titleEl.clientHeight ? "3.5vh" : "5vh";
         }
+        $("#home-screen #hero-meta-row").html(
+          typeof mapper !== "undefined" && mapper.formatMetaBadges
+            ? mapper.formatMetaBadges(item)
+            : ""
+        );
         var descEl = $("#home-screen .details .info .description")[0];
         if (descEl) {
           descEl.innerText = item.description;
-          descEl.style.fontSize =
-            descEl.scrollHeight > descEl.clientHeight ? "2vh" : "2.5vh";
         }
       }
     }, 80);
@@ -752,25 +1173,66 @@ function setupMouseSupport() {
       var horizontal = Math.abs(dx) > Math.abs(dy);
       var target = e.target;
 
-      // 1. Video screen: scroll audio/subtitle lists inside #languages-content when settings drawer is open
+      // 0. Custom Lists modal scroll
+      if (
+        typeof home_details !== "undefined" &&
+        main.state === home_details.id &&
+        home_details.listModalOpen
+      ) {
+        if (target && target.closest && target.closest("#custom-lists-body")) {
+          return;
+        }
+        var listsBody = document.getElementById("custom-lists-body");
+        if (listsBody) {
+          listsBody.scrollTop += dy;
+        }
+        return;
+      }
+
+      // 1. Video screen: scroll episodes drawer or audio/subtitle lists when open, scrub 5s over progress bar, or adjust volume
       if (typeof video !== "undefined" && main.state === video.id) {
-        if (video.settings && video.settings.open) {
-          var langCol = target && (target.closest("#audios") || target.closest("#subtitles"));
-          if (!langCol) {
-            var subsEl = document.getElementById("subtitles");
-            var audiosEl = document.getElementById("audios");
-            if (subsEl && audiosEl) {
-              var subsRect = subsEl.getBoundingClientRect();
-              langCol = e.clientX >= subsRect.left - 20 ? subsEl : audiosEl;
-            } else {
-              langCol = subsEl || audiosEl;
-            }
+        if (video.episodesDrawer && video.episodesDrawer.open) {
+          if (target && target.closest && target.closest("#player-episodes-list")) {
+            return;
           }
-          if (langCol && langCol.firstElementChild) {
-            var firstOpt = langCol.firstElementChild;
-            var maxVisible = langCol.id === "audios" ? 4 : 3;
-            var maxLangScroll = Math.max(0, (langCol.children.length - maxVisible) * 82);
-            scrollMarginElement(firstOpt, dy, maxLangScroll);
+          var epListEl = document.getElementById("player-episodes-list");
+          if (epListEl) {
+            epListEl.scrollTop += dy;
+          }
+          return;
+        }
+        if (video.settings && video.settings.open) {
+          var langCol = target && target.closest && (target.closest("#audios") || target.closest("#subtitles"));
+          if (langCol) {
+            return;
+          }
+          var subsEl = document.getElementById("subtitles");
+          var audiosEl = document.getElementById("audios");
+          if (subsEl && audiosEl) {
+            var subsRect = subsEl.getBoundingClientRect();
+            langCol = e.clientY >= subsRect.top - 10 ? subsEl : audiosEl;
+          } else {
+            langCol = subsEl || audiosEl;
+          }
+          if (langCol) {
+            langCol.scrollTop += dy;
+          }
+        } else if (typeof player !== "undefined") {
+          var inProgress =
+            target &&
+            target.closest &&
+            target.closest(".osd .progress") &&
+            !target.closest("#osd-volume");
+          if (inProgress) {
+            if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
+              video.abortAutoSkip();
+            }
+            var deltaSec = (horizontal ? dx : -dy) > 0 ? 5 : -5;
+            player.seekBy(deltaSec, video.setPlayingTime);
+            video.showOSD();
+          } else if (Math.abs(dy) > 0) {
+            player.adjustVolume(dy < 0 ? 0.05 : -0.05);
+            video.showOSD();
           }
         }
         return;
@@ -783,10 +1245,11 @@ function setupMouseSupport() {
           var offsetEl = document.getElementById("seasons-list-offset");
           var sListEl = document.querySelector(".seasons .seasons-list");
           if (offsetEl && sListEl) {
-            var seasonCount = offsetEl.querySelectorAll(".season").length;
+            var seasonItems = offsetEl.querySelectorAll(".season");
+            var seasonPitch = seasonItems[0] ? seasonItems[0].offsetHeight + 12 : 68;
             var maxSeasonScroll = Math.max(
               0,
-              (seasonCount - 6) * 85,
+              (seasonItems.length - 6) * seasonPitch,
               getContentHeight(offsetEl) - (sListEl.clientHeight || window.innerHeight - 250) + 60
             );
             scrollMarginElement(offsetEl, dy, maxSeasonScroll);
@@ -834,12 +1297,20 @@ function setupMouseSupport() {
               listData && listData.items
                 ? listData.items.length
                 : Math.max(0, rItems.length - 9);
-            var firstItem = rItems[0];
-            var lastRealItem = rItems[Math.min(realItemCount - 1, rItems.length - 1)];
-            var totalRowW =
-              firstItem && lastRealItem
-                ? lastRealItem.offsetLeft - firstItem.offsetLeft + lastRealItem.offsetWidth + 80
-                : rTrack.scrollWidth;
+            var hasMoreOrLoading = Boolean(
+              home.fromCategory &&
+                home.fromCategory.state &&
+                ((listData && listData.lazy && realItemCount > 15) ||
+                  rowContent.querySelector(".row-lazy-loader"))
+            );
+            var targetIdx = Math.min(
+              realItemCount - 1 + (hasMoreOrLoading ? 1 : 0),
+              rItems.length - 1
+            );
+            var lastRealItem = rItems[Math.max(0, targetIdx)];
+            var totalRowW = lastRealItem
+              ? lastRealItem.offsetLeft + lastRealItem.offsetWidth + 64
+              : rTrack.scrollWidth;
             var viewRowW = rSlickList.clientWidth || rowContent.clientWidth;
             var maxRowX = Math.max(0, totalRowW - viewRowW);
             var curRowX = getTrackOffset(rTrack, "x");
@@ -853,10 +1324,12 @@ function setupMouseSupport() {
               listData &&
               listData.lazy &&
               listData.items.length > 15 &&
-              nextRowX > maxRowX - 600
+              nextRowX > maxRowX - 750
             ) {
               listData.lazy = false;
-              loading.start();
+              if (typeof home.setRowLoading === "function") {
+                home.setRowLoading(rIdx, true);
+              }
               mapper.loadCategoryListAsync(
                 home.data.main.category + "," + listData.id,
                 listData.items.length,
@@ -864,12 +1337,29 @@ function setupMouseSupport() {
                 rIdx,
                 {
                   success: function (response, index) {
-                    home.data.main.lists[index].lazy = response.items.length === 20;
-                    home.addToList(index, mapper.mapItems(response.items));
-                    loading.end();
+                    if (typeof home.setRowLoading === "function") {
+                      home.setRowLoading(index, false);
+                    }
+                    if (
+                      !home.data ||
+                      !home.data.main ||
+                      !home.data.main.lists ||
+                      !home.data.main.lists[index]
+                    ) {
+                      return;
+                    }
+                    var newRaw =
+                      response && Array.isArray(response.items)
+                        ? response.items
+                        : [];
+                    home.data.main.lists[index].lazy = newRaw.length === 20;
+                    home.addToList(index, mapper.mapItems(newRaw));
                   },
-                  error: function () {
-                    loading.end();
+                  error: function (err) {
+                    if (typeof home.setRowLoading === "function") {
+                      home.setRowLoading(rIdx, false);
+                    }
+                    console.log(err);
                   },
                 }
               );
@@ -890,14 +1380,12 @@ function setupMouseSupport() {
             if (home.position === 0) home.position = 1;
           }
           var rowEls = vTrack.querySelectorAll(":scope > .row");
-          var firstRowEl = rowEls[0];
           var lastRowEl = rowEls[rowEls.length - 1];
-          var detailsH = window.innerHeight * 0.5;
+          var detailsH = window.innerHeight * 0.36;
           var viewH = Math.max(300, window.innerHeight - detailsH);
-          var totalH =
-            firstRowEl && lastRowEl
-              ? lastRowEl.offsetTop - firstRowEl.offsetTop + lastRowEl.offsetHeight + 100
-              : vTrack.scrollHeight;
+          var totalH = lastRowEl
+            ? lastRowEl.offsetTop + lastRowEl.offsetHeight + 28
+            : vTrack.scrollHeight;
           var maxY = Math.max(0, totalH - viewH);
           if (curY <= 0 && dy < -2) {
             if (detailsEl) detailsEl.classList.add("full");
@@ -928,12 +1416,10 @@ function setupMouseSupport() {
               mlListData && mlListData.items
                 ? mlListData.items.length
                 : Math.max(0, mlItems.length - 9);
-            var mlFirstItem = mlItems[0];
             var mlLastReal = mlItems[Math.min(mlRealCount - 1, mlItems.length - 1)];
-            var mlTotalW =
-              mlFirstItem && mlLastReal
-                ? mlLastReal.offsetLeft - mlFirstItem.offsetLeft + mlLastReal.offsetWidth + 80
-                : mlTrack.scrollWidth;
+            var mlTotalW = mlLastReal
+              ? mlLastReal.offsetLeft + mlLastReal.offsetWidth + 64
+              : mlTrack.scrollWidth;
             var mlViewW = mlSlickList.clientWidth || mlRowContent.clientWidth;
             var mlMaxX = Math.max(0, mlTotalW - mlViewW);
             var mlCurX = getTrackOffset(mlTrack, "x");
@@ -975,9 +1461,11 @@ function setupMouseSupport() {
         var wrapEl = document.querySelector("#browse-screen .browse-content-wrapper");
         if (wrapEl) {
           var items = wrapEl.querySelectorAll(".item");
+          var firstItemEl = items[0];
+          var itemPitch = firstItemEl ? firstItemEl.offsetHeight + 12 : 66;
           var maxBrowseScroll = Math.max(
             0,
-            (items.length - 7) * 110,
+            (items.length - 7) * itemPitch,
             getContentHeight(wrapEl) - (window.innerHeight - 160)
           );
           scrollMarginElement(wrapEl, dy, maxBrowseScroll);
@@ -987,19 +1475,17 @@ function setupMouseSupport() {
 
       // 7. Settings screen (#settings-screen)
       if (typeof settings !== "undefined" && main.state === settings.id) {
-        var settingsUl =
-          document.getElementById("list-details-offset") ||
-          document.querySelector("#settings-details ul");
-        var settingsCont = document.getElementById("settings-details");
-        if (settingsUl) {
-          var maxSetScroll = Math.max(
-            0,
-            (settingsUl.children.length - 5) * 104,
-            getContentHeight(settingsUl) -
-              (settingsCont ? settingsCont.clientHeight : window.innerHeight * 0.65) +
-              80
-          );
-          scrollMarginElement(settingsUl, dy, maxSetScroll);
+        if (target && target.closest && target.closest("#settings-details")) {
+          return;
+        }
+        var midPane =
+          target && target.closest && target.closest("#settings-screen .container-mid");
+        if (midPane && midPane.scrollHeight > midPane.clientHeight + 4) {
+          return;
+        }
+        var scrollPane = document.getElementById("settings-details");
+        if (scrollPane) {
+          scrollPane.scrollTop += dy;
         }
         return;
       }
@@ -1014,7 +1500,22 @@ function setupMouseSupport() {
       hoverPreviewTimer = null;
     }
     var target = e.target;
-    if (!target || target.closest("#top-center-dock")) {
+    if (
+      typeof video !== "undefined" &&
+      main.state === video.id &&
+      target &&
+      !target.closest("#skip-intro") &&
+      typeof video.isAutoSkipping === "function" &&
+      video.isAutoSkipping() &&
+      (target.closest("#top-center-dock") || target.closest("#screen-back-btn"))
+    ) {
+      video.abortAutoSkip();
+    }
+    if (
+      !target ||
+      target.closest("#top-center-dock") ||
+      target.closest("#screen-back-btn")
+    ) {
       return;
     }
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
@@ -1095,15 +1596,41 @@ function setupMouseSupport() {
     // 5. Video Player (#video-screen)
     if (typeof video !== "undefined" && main.state === video.id) {
       var skipIntro = target.closest("#skip-intro");
-      if (skipIntro && video.intro && video.intro.state) {
-        player.forwardTo(video.intro.end);
+      if (skipIntro && (video.activeSkip || (video.intro && video.intro.state))) {
+        video.skipCurrentSegment();
         return;
+      }
+
+      var wasAutoSkipping =
+        typeof video.isAutoSkipping === "function" && video.isAutoSkipping();
+      if (wasAutoSkipping) {
+        video.abortAutoSkip();
       }
 
       var nextEp = target.closest(".next-episode");
       if (nextEp && video.next && video.next.status) {
         clearInterval(video.timers.next);
         video.playNext();
+        return;
+      }
+
+      if (video.episodesDrawer && video.episodesDrawer.open) {
+        var epClose = target.closest("#player-episodes-close");
+        if (epClose) {
+          video.closeEpisodes(true);
+          return;
+        }
+        var epItem = target.closest("#player-episodes-list .player-ep-item");
+        if (epItem) {
+          var epIdx = parseInt(epItem.getAttribute("data-index"), 10);
+          if (!isNaN(epIdx)) {
+            video.playEpisodeFromDrawer(epIdx);
+          }
+          return;
+        }
+        if (!target.closest("#player-episodes-slide")) {
+          video.closeEpisodes(true);
+        }
         return;
       }
 
@@ -1152,16 +1679,40 @@ function setupMouseSupport() {
         return;
       }
 
-      var progressBar = osdVisible && target.closest(".osd .progress .bar");
-      if (progressBar) {
-        var rect = progressBar.getBoundingClientRect();
-        var ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        var dur = player.getDuration();
-        if (dur && dur > 0) {
-          player.forwardTo(ratio * dur);
-          video.setPlayingTime();
-          video.showOSD();
-        }
+      if (justFinishedScrubbing) {
+        return;
+      }
+
+      var volMuteBtn = osdVisible && target.closest("#btn-volume-mute");
+      if (volMuteBtn) {
+        player.toggleMute();
+        video.showOSD();
+        return;
+      }
+
+      if (osdVisible && isPointInVolumeSliderZone(e)) {
+        setVolumeAtClientX(e.clientX);
+        return;
+      }
+
+      if (osdVisible && target.closest("#osd-volume")) {
+        video.showOSD();
+        return;
+      }
+
+      var barEl = osdVisible && document.querySelector(".osd .progress .bar");
+      if (barEl && isPointInProgressHitZone(barEl, e)) {
+        seekAtClientX(barEl, e.clientX);
+        return;
+      }
+      if (osdVisible && target.closest(".osd .progress")) {
+        video.showOSD();
+        return;
+      }
+
+      // If the click on the video surface aborted an active auto-skip countdown, do not toggle play/pause
+      if (wasAutoSkipping) {
+        video.showOSD();
         return;
       }
 
@@ -1174,7 +1725,12 @@ function setupMouseSupport() {
       if (e.detail === 1) {
         videoClickTimer = setTimeout(function () {
           videoClickTimer = null;
-          if (typeof video !== "undefined" && main.state === video.id && !video.settings.open) {
+          if (
+            typeof video !== "undefined" &&
+            main.state === video.id &&
+            !video.settings.open &&
+            !(video.episodesDrawer && video.episodesDrawer.open)
+          ) {
             player.playPause();
           }
         }, 200);
@@ -1224,8 +1780,28 @@ function setupMouseSupport() {
       return;
     }
 
-    // 7. Anime Details screen (.home_details-screen_buttons a)
+    // 7. Anime Details screen (.home_details-screen_buttons a & #crunchylist-modal)
     if (typeof home_details !== "undefined" && main.state === home_details.id) {
+      if (home_details.listModalOpen) {
+        var delListBtn = target.closest("#crunchylist-modal .crunchylist-delete-btn");
+        if (delListBtn) {
+          e.stopPropagation();
+          var delId = delListBtn.getAttribute("data-delete-list-id");
+          if (delId) {
+            home_details.deleteCustomListById(delId);
+          }
+          return;
+        }
+        var clRow = target.closest("#crunchylist-modal .custom-list-item");
+        if (clRow) {
+          home_details.toggleCustomListMembership(clRow);
+          return;
+        }
+        if (!target.closest("#crunchylist-modal .crunchylist-card")) {
+          home_details.closeListManager();
+        }
+        return;
+      }
       var detailBtn = target.closest(".home_details-screen_buttons a");
       if (detailBtn) {
         var allDetailBtns = $(".home_details-screen_buttons a");
@@ -1278,12 +1854,8 @@ function setupMouseSupport() {
         var allBannerBtns = $("#home-screen .details .buttons a");
         allBannerBtns.removeClass("selected");
         $(bannerBtn).addClass("selected");
-        if (home._previewItem) {
-          home_details.init(home._previewItem);
-        } else {
-          home.position = 0;
-          home.keyDown({ keyCode: tvKey.KEY_ENTER });
-        }
+        home.position = 0;
+        home.keyDown({ keyCode: tvKey.KEY_ENTER });
         return;
       }
 
@@ -1375,6 +1947,16 @@ function setupMouseSupport() {
 
     // 14. My List screen (#mylist-screen)
     if (typeof mylist !== "undefined" && main.state === mylist.id) {
+      var quickRemoveBtn = target.closest("#mylist-screen .mylist-quick-remove");
+      if (quickRemoveBtn) {
+        e.stopPropagation();
+        var rmListId = quickRemoveBtn.getAttribute("data-list-id");
+        var rmContentId = quickRemoveBtn.getAttribute("data-content-id");
+        if (rmContentId && typeof mylist.removeItemFromList === "function") {
+          mylist.removeItemFromList(rmListId, rmContentId);
+        }
+        return;
+      }
       var mylistItem = target.closest("#mylist-screen .row-content .item");
       if (mylistItem) {
         var mlRowContent = mylistItem.closest(".row-content");
@@ -1410,6 +1992,19 @@ function setupMouseSupport() {
 
     // 15. Settings screen (#settings-screen)
     if (typeof settings !== "undefined" && main.state === settings.id) {
+      var extLink = target.closest("[data-external-url]");
+      if (extLink) {
+        var url = extLink.getAttribute("data-external-url");
+        if (
+          url &&
+          window.electronUtilsRender &&
+          typeof window.electronUtilsRender.openExternal === "function"
+        ) {
+          window.electronUtilsRender.openExternal(url);
+        }
+        return;
+      }
+
       var settingsMenuLi = target.closest("#settings-menu li");
       if (settingsMenuLi) {
         var allSettingsLi = $("#settings-menu li");
@@ -1464,16 +2059,51 @@ window.onunload = function () {
 };
 
 app.keyDown = function (e) {
+  if (typeof main !== "undefined" && typeof main.resolveState === "function") {
+    main.resolveState();
+  }
   var activeTag = document.activeElement && document.activeElement.tagName;
+
+  // Handle Tab / Shift+Tab cycling on the Login screen
+  if (e.keyCode === 9 && typeof login !== "undefined" && main.state === login.id) {
+    e.preventDefault();
+    var nextIdx = e.shiftKey
+      ? (login.selected + 2) % 3
+      : (login.selected + 1) % 3;
+    login.move(nextIdx, true);
+    return;
+  }
+
   if (activeTag === "INPUT" || activeTag === "TEXTAREA") {
     if (e.keyCode === 13) {
       e.preventDefault();
-      document.activeElement.blur();
       if (typeof search !== "undefined" && main.state === search.id) {
+        document.activeElement.blur();
         search.start();
       } else if (typeof login !== "undefined" && main.state === login.id) {
-        login.action(2);
+        var passEl = document.getElementById("login-password");
+        if (document.activeElement.id === "login-username" && passEl && !passEl.value) {
+          login.move(1, true);
+        } else {
+          document.activeElement.blur();
+          login.action(2);
+        }
       }
+      return;
+    } else if (e.keyCode === 40 && typeof search !== "undefined" && main.state === search.id) {
+      if (search.data && search.data.result && search.data.result.length > 0) {
+        e.preventDefault();
+        document.activeElement.blur();
+        search.toggleFocus(0);
+      }
+      return;
+    } else if (e.keyCode === 38 && typeof login !== "undefined" && main.state === login.id) {
+      e.preventDefault();
+      login.move(Math.max(0, login.selected - 1), true);
+      return;
+    } else if (e.keyCode === 40 && typeof login !== "undefined" && main.state === login.id) {
+      e.preventDefault();
+      login.move(Math.min(2, login.selected + 1), true);
       return;
     } else if (e.keyCode === 27) {
       document.activeElement.blur();
@@ -1482,11 +2112,63 @@ app.keyDown = function (e) {
     return;
   }
 
+  // Backspace or Alt+Left goes back one screen when not typing in an input
+  if (e.keyCode === 8 || (e.altKey && e.keyCode === 37)) {
+    e.preventDefault();
+    if (typeof window.navigateBack === "function") {
+      window.navigateBack();
+    } else {
+      sendKey(tvKey.KEY_ESCAPE);
+    }
+    return;
+  }
+
+  // Ctrl+F or '/' jumps straight to Search on catalog screens
+  if (
+    ((e.ctrlKey || e.metaKey) && e.keyCode === 70) ||
+    (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "/")
+  ) {
+    if (typeof search !== "undefined" && typeof main !== "undefined" && main.state === search.id) {
+      e.preventDefault();
+      if (search.input) {
+        search.toggleFocus(-1);
+        search.input.focus();
+      }
+      return;
+    }
+    var canJumpToSearch =
+      typeof main !== "undefined" &&
+      typeof menu !== "undefined" &&
+      document.getElementById(menu.id) &&
+      !document.getElementById("crunchylist-modal") &&
+      (main.state === (typeof home !== "undefined" && home.id) ||
+        main.state === (typeof browse !== "undefined" && browse.id) ||
+        main.state === (typeof mylist !== "undefined" && mylist.id) ||
+        main.state === (typeof historyScreen !== "undefined" && historyScreen.id) ||
+        main.state === (typeof settings !== "undefined" && settings.id));
+    if (canJumpToSearch) {
+      e.preventDefault();
+      var menuOpts = $("#menu-screen .option");
+      if (menuOpts.length > 1) {
+        menuOpts.removeClass("focus");
+        menuOpts.eq(1).addClass("focus");
+        menu.keyDown({ keyCode: tvKey.KEY_ENTER });
+      }
+      return;
+    }
+  }
+
   // Space bar toggles Play/Pause on the video player screen
   if (e.keyCode === 32 || e.key === " " || e.code === "Space") {
     e.preventDefault();
     if (typeof video !== "undefined" && main.state === video.id) {
-      if (!video.settings.open) {
+      if (
+        !video.settings.open &&
+        !(video.episodesDrawer && video.episodesDrawer.open)
+      ) {
+        if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
+          video.abortAutoSkip();
+        }
         video.showOSD();
         player.playPause();
       }

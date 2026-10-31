@@ -1,58 +1,132 @@
 #history-screen {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #08080c;
   overflow: hidden;
 }
 
 #history-screen .content {
   height: 100vh;
-  padding: 50px 60px 60px 8.5vw;
+  padding: 74px 60px 60px 124px;
+}
+
+#history-screen .screen-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+}
+
+#history-screen .screen-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #f47521;
+}
+
+#history-screen .screen-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+#history-screen .history-empty {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 1.05rem;
+  font-weight: 500;
+  padding: 40px 0;
 }
 
 #history-screen .content .list-container {
   overflow: hidden;
-  height: calc(100vh - 110px);
+  height: calc(100vh - 165px);
 }
 
 #history-screen .content .list-container .list-container-over {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px 20px;
   overflow: hidden;
   padding-bottom: 120px;
+  transition: margin-top 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #history-screen .content .list-container .list-container-over .item {
-  background: rgba(100, 100, 100, 0.5);
-  width: 315px;
-  height: 180px;
-  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.04);
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  opacity: 0.72;
   position: relative;
-  float: left;
-  margin: 15px;
-}
-
-#history-screen
-  .content
-  .list-container
-  .list-container-over
-  .item:nth-child(5n) {
-  margin-right: 0;
-}
-
-#history-screen
-  .content
-  .list-container
-  .list-container-over
-  .item:nth-child(5n + 1) {
-  margin-left: 0;
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 #history-screen .content .list-container .list-container-over .item img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#history-screen .content .list-container .list-container-over .item .history-card-info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 12px 10px 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 12, 0) 0%,
+    rgba(8, 8, 12, 0.78) 48%,
+    rgba(8, 8, 12, 0.95) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#history-screen .content .list-container .list-container-over .item .history-series-title {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#history-screen .content .list-container .list-container-over .item .history-ep-title {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #history-screen .content .list-container .list-container-over .item.selected {
   opacity: 1;
+  border-color: #f47521;
+  box-shadow:
+    0 0 0 2px rgba(244, 117, 33, 0.35),
+    0 14px 28px rgba(0, 0, 0, 0.68);
 }
 
 #history-screen
@@ -67,15 +141,19 @@
   top: 0;
   left: 0;
   box-sizing: border-box;
-  border: 3px solid rgba(244, 130, 33, 0.9);
-  /* box-shadow: 0 0 25px 6px #727272, 0 0 15px 6px #727272 inset; */
+  border: 2px solid #f47521;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 4;
 }
 
 #history-screen .content .list-container .list-container-over .item .progress {
-  height: 12px;
+  height: 4px;
   position: absolute;
-  background: rgba(244, 130, 33, 0.7);
+  background: linear-gradient(90deg, #f47521 0%, #ff9248 100%);
   bottom: 0;
+  left: 0;
+  z-index: 3;
 }
 
 #history-screen
@@ -85,13 +163,19 @@
   .item
   .progress::after {
   content: attr(value);
-  color: #fff;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 5px 10px;
-  top: -148px;
-  min-width: 25px;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(10, 10, 14, 0.86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 3px 8px;
+  bottom: 48px;
+  min-width: 24px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   position: absolute;
-  left: 15px;
-  border-radius: 15px;
+  left: 10px;
+  border-radius: 6px;
 }

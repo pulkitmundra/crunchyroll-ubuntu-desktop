@@ -1,9 +1,15 @@
 #keyboard-screen {
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.85);
-  padding: 20px 20px;
-  width: 40vw;
-  min-width: 600px;
+  background: rgba(14, 14, 22, 0.94);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(244, 117, 33, 0.55);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.8);
+  padding: 18px 22px 22px 22px;
+  width: 42vw;
+  min-width: 580px;
   bottom: 0;
   left: 0;
   right: 0;
@@ -12,71 +18,85 @@
 }
 
 #keyboard-screen .row {
-  margin: 5px 0;
-  height: 25%;
+  margin: 6px 0;
+  height: 46px;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 6px;
 }
 
 #keyboard-screen .padding {
-  padding: 0 25px;
+  padding: 0 20px;
 }
 
 #keyboard-screen .col {
-  padding: 0 5px;
-  height: 25%;
-  color: rgba(255, 255, 255, 0.5);
-  float: left;
-  font-size: 20px;
+  padding: 0 6px;
+  height: 44px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
   text-align: center;
-  line-height: 55px;
-  border-bottom: 0.3rem solid transparent;
-  font-weight: bold;
+  line-height: 42px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.14s ease;
 }
 
 #keyboard-screen .size-backspace {
   width: 10%;
-  height: 59px;
+  height: 44px;
 }
 
 #keyboard-screen .size-backspace::before {
   content: "\f55a";
-  font-size: 25px;
+  font-size: 18px;
   font-family: "Font Awesome 6 Free";
 }
 
 #keyboard-screen .size-alpha,
 #keyboard-screen .size-symbol {
   width: 10%;
-  height: 59px;
+  height: 44px;
 }
 
 #keyboard-screen .size-alpha::before {
   content: "\f0aa";
-  font-size: 25px;
+  font-size: 18px;
   font-family: "Font Awesome 6 Free";
 }
 
 #keyboard-screen .size-symbol::before {
   content: "\f121";
-  font-size: 25px;
+  font-size: 18px;
   font-family: "Font Awesome 6 Free";
 }
 
 #keyboard-screen .col.size-symbol.active,
 #keyboard-screen .col.size-alpha.active {
-  color: rgba(255, 255, 255, 1);
+  color: #f47521;
+  border-color: rgba(244, 117, 33, 0.55);
+  background: rgba(244, 117, 33, 0.14);
 }
 
 #keyboard-screen .size-ok {
-  height: 59px;
-  width: 30%;
+  height: 44px;
+  width: 28%;
+  background: rgba(244, 117, 33, 0.18);
+  border-color: rgba(244, 117, 33, 0.45);
+  color: #ffffff;
 }
 
 #keyboard-screen .size-ok::before {
   content: "\f058";
-  font-size: 25px;
+  font-size: 18px;
   font-family: "Font Awesome 6 Free";
 }
 
@@ -85,41 +105,37 @@
 }
 
 #keyboard-screen .size-2 {
-  width: 30%;
+  width: 28%;
 }
 
 #keyboard-screen .size-5 {
   width: 40%;
-  height: 59px;
+  height: 44px;
 }
 
 #keyboard-screen .size-5:before {
-  content: "";
-  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
-  width: 94%;
-  display: block;
-  left: 3%;
-  bottom: -70%;
-  position: relative;
+  content: "SPACE";
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.45);
 }
 
-#keyboard-screen .col.selected {
+#keyboard-screen .col.selected,
+#keyboard-screen .col:hover {
   position: relative;
-  color: rgba(255, 255, 255, 1) !important;
+  color: #0b0b0f !important;
+  background: #f47521 !important;
+  border-color: #ff9d5c !important;
   opacity: 1 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(244, 117, 33, 0.38);
 }
 
 #keyboard-screen .col.selected::after {
-  content: "";
-  width: 100%;
-  height: 0.3rem;
-  background: #f47521;
-  position: absolute;
-  bottom: -0.3rem;
-  left: 0;
-  /* box-shadow: 0 0 25px 6px #f47521, 0 0 15px 6px #f47521 inset; */
+  display: none;
 }
 
-#keyboard-screen .col.size-5.selected::before {
-  border-color: rgba(255, 255, 255, 1) !important;
+#keyboard-screen .col.size-5.selected::before,
+#keyboard-screen .col.size-5:hover::before {
+  color: #0b0b0f !important;
 }

@@ -11,9 +11,16 @@ window.home_episodes = {
     var episode_contents = document.createElement("div");
     episode_contents.className = `${home_episodes.id} ${home_episodes.id}_content`;
 
+    var esc =
+      typeof mapper !== "undefined" && mapper.escapeHtml
+        ? mapper.escapeHtml
+        : function (s) {
+            return String(s == null ? "" : s);
+          };
+
     episode_contents.innerHTML = `
     <div class="option seasons">
-      <div class="title resize">${item.title}</div>
+      <div class="title resize">${esc(item.title)}</div>
       <div class="seasons-list">
         <div id="seasons-list-offset"></div>
       </div>
@@ -36,14 +43,17 @@ window.home_episodes = {
         home_episodes.data.seasons = mapper.seasons(response);
         var seasons_html = "";
         home_episodes.data.seasons.forEach((season, index) => {
-          if(season.audio_locale.length) {
-            var audio_locale = `(<i class="fa-solid fa-volume-low"></i> ${season.audio_locale})`
-          }
+          var audio_locale =
+            season.audio_locale && season.audio_locale.length
+              ? `(<i class="fa-solid fa-volume-low"></i> ${esc(season.audio_locale)})`
+              : "";
           seasons_html += `
-          <div class="season${index === 0 ? " selected active" : ""}">${season.title} ${audio_locale}</div>`;
+          <div class="season${index === 0 ? " selected active" : ""}">${esc(season.title)} ${audio_locale}</div>`;
         });
         $(".seasons #seasons-list-offset").eq(0).html(seasons_html);
-        home_episodes.load(home_episodes.data.seasons[0]);
+        if (home_episodes.data.seasons && home_episodes.data.seasons.length > 0) {
+          home_episodes.load(home_episodes.data.seasons[0]);
+        }
       },
       error: function (error) {
         loading.end();
@@ -60,6 +70,13 @@ window.home_episodes = {
   },
 
   load: function (season) {
+    if (!season || !$(".episodes .title")[0] || !$(".episodes .episodes-list")[0]) return;
+    var esc =
+      typeof mapper !== "undefined" && mapper.escapeHtml
+        ? mapper.escapeHtml
+        : function (s) {
+            return String(s == null ? "" : s);
+          };
     $(".episodes .title")[0].innerText = `${season.title}`;
     $(".episodes .episodes-list")[0].slick &&
       $(".episodes .episodes-list")[0].slick.destroy();
@@ -72,25 +89,32 @@ window.home_episodes = {
       success: function (response) {
         mapper.episodes(response, function (result) {
           home_episodes.data.episodes = result;
+          if (!$(".episodes .episodes-list")[0]) {
+            loading.end();
+            return;
+          }
 
           var episodes_html = "";
           home_episodes.data.episodes.forEach((episode) => {
+            var subDubBadge = episode.subDub
+              ? `<span class="ep-subdub-badge">${esc(episode.subDub)}</span>`
+              : "";
             episodes_html += `
             <div class="episode">
               <div class="episode-image">
-                <img src="${episode.background}">
+                <img src="${esc(episode.background)}">
                 ${home_episodes.view(episode)}
                 ${home_episodes.premium(episode)}
               </div>
               <div class="episode-details">
-                <div class="episode-title">${episode.episode_number}. ${episode.title}</div>
-                <div class="episode-description">${episode.description}</div>
+                <div class="episode-title">${esc(episode.episode_number)}. ${esc(episode.title)} ${subDubBadge}</div>
+                <div class="episode-description">${esc(episode.description)}</div>
               </div>
             </div>`;
           });
           for (var index = 0; index < 4; index++) {
             episodes_html += `
-            <div class="episode">
+            <div class="episode empty">
               <div class="episode-image">
                 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
               </div>
@@ -109,7 +133,9 @@ window.home_episodes = {
             waitForAnimate: false,
           });
 
-          $(".episodes .episodes-list")[0].slick.slickGoTo(0);
+          if ($(".episodes .episodes-list")[0] && $(".episodes .episodes-list")[0].slick) {
+            $(".episodes .episodes-list")[0].slick.slickGoTo(0);
+          }
           loading.end();
         });
       },
@@ -121,15 +147,14 @@ window.home_episodes = {
   },
 
   view: function (episode) {
-    return episode.playhead !== 0
-      ? `<div class="progress" style="width: ${
-          (episode.playhead * 100) / episode.duration
-        }%" value="${
-          episode.duration === episode.playhead
-            ? translate.go("home.episodes.watched")
-            : episode.duration - episode.playhead + "m"
-        }"></div>`
-      : "";
+    if (!episode.playhead || !episode.duration) return "";
+    var pct = Math.min(100, Math.max(0, (episode.playhead * 100) / episode.duration));
+    var remMin = Math.max(1, Math.round(episode.duration - episode.playhead));
+    return `<div class="progress" style="width: ${pct}%" value="${
+      episode.playhead >= episode.duration
+        ? translate.go("home.episodes.watched")
+        : remMin + "m"
+    }"></div>`;
   },
 
   premium: function (episode) {
@@ -146,10 +171,19 @@ window.home_episodes = {
   destroy: function () {
     $(`body`).removeClass(`${home_episodes.id}`);
     $(`.${home_episodes.id}`).remove();
+    if (
+      typeof home_details !== "undefined" &&
+      document.body.classList.contains(home_details.id)
+    ) {
+      $(`#${home.id} .content > .details`).addClass("full");
+    }
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
       main.state = main.resolveState() || home_episodes.previous;
     } else {
       main.state = home_episodes.previous;
+    }
+    if (typeof window.refreshSlickLayouts === "function") {
+      window.refreshSlickLayouts();
     }
   },
 
@@ -184,19 +218,21 @@ window.home_episodes = {
         current = options.index($(`.seasons-list .season.active`));
         $(`.seasons-list .season`).removeClass("selected");
 
+        var seasonPitch = options.get(0) ? options.get(0).offsetHeight + 12 : 68;
         var marginTop = 0;
         if (options.length > 8 && current > 4) {
           if (current > options.length - 4) {
-            marginTop = -((options.length - 8) * 72);
+            marginTop = -((options.length - 8) * seasonPitch);
           } else {
-            marginTop = -((current - 4) * 72);
+            marginTop = -((current - 4) * seasonPitch);
           }
         }
 
         options.eq(current).addClass("selected");
-        document.getElementById(
-          "seasons-list-offset"
-        ).style.marginTop = `${marginTop}px`;
+        var offsetElRight = document.getElementById("seasons-list-offset");
+        if (offsetElRight) {
+          offsetElRight.style.marginTop = `${marginTop}px`;
+        }
         break;
       case tvKey.KEY_UP:
         var options = $(
@@ -206,7 +242,10 @@ window.home_episodes = {
           $(`.${home_episodes.id}.${home_episodes.id}_content .option.active`)
         );
         if (current > 0) {
-          $(".episodes .episodes-list")[0].slick.prev();
+          var epListEl = $(".episodes .episodes-list")[0];
+          if (epListEl && epListEl.slick) {
+            epListEl.slick.prev();
+          }
         } else {
           options = $(`.seasons-list .season`);
           current = options.index($(`.seasons-list .season.selected`));
@@ -215,18 +254,20 @@ window.home_episodes = {
           var newCurrent = current > 0 ? current - 1 : current;
           options.eq(newCurrent).addClass("selected");
 
+          var seasonPitch = options.get(0) ? options.get(0).offsetHeight + 12 : 68;
           var marginTop = 0;
           if (options.length > 8 && newCurrent > 4) {
             if (newCurrent > options.length - 4) {
-              marginTop = -((options.length - 8) * 72);
+              marginTop = -((options.length - 8) * seasonPitch);
             } else {
-              marginTop = -((newCurrent - 4) * 72);
+              marginTop = -((newCurrent - 4) * seasonPitch);
             }
           }
 
-          document.getElementById(
-            "seasons-list-offset"
-          ).style.marginTop = `${marginTop}px`;
+          var offsetElUp = document.getElementById("seasons-list-offset");
+          if (offsetElUp) {
+            offsetElUp.style.marginTop = `${marginTop}px`;
+          }
         }
         break;
       case tvKey.KEY_DOWN:
@@ -237,7 +278,15 @@ window.home_episodes = {
           $(`.${home_episodes.id}.${home_episodes.id}_content .option.active`)
         );
         if (current > 0) {
-          $(".episodes .episodes-list")[0].slick.next();
+          var epListEl = $(".episodes .episodes-list")[0];
+          if (
+            epListEl &&
+            epListEl.slick &&
+            home_episodes.data.episodes &&
+            epListEl.slick.currentSlide < home_episodes.data.episodes.length - 1
+          ) {
+            epListEl.slick.next();
+          }
         } else {
           options = $(`.seasons-list .season`);
           current = options.index($(`.seasons-list .season.selected`));
@@ -246,18 +295,20 @@ window.home_episodes = {
           var newCurrent = current < options.length - 1 ? current + 1 : current;
           options.eq(newCurrent).addClass("selected");
 
+          var seasonPitch = options.get(0) ? options.get(0).offsetHeight + 12 : 68;
           var marginTop = 0;
           if (options.length > 8 && newCurrent > 4) {
             if (newCurrent > options.length - 4) {
-              marginTop = -((options.length - 8) * 72);
+              marginTop = -((options.length - 8) * seasonPitch);
             } else {
-              marginTop = -((newCurrent - 4) * 72);
+              marginTop = -((newCurrent - 4) * seasonPitch);
             }
           }
 
-          document.getElementById(
-            "seasons-list-offset"
-          ).style.marginTop = `${marginTop}px`;
+          var offsetElDown = document.getElementById("seasons-list-offset");
+          if (offsetElDown) {
+            offsetElDown.style.marginTop = `${marginTop}px`;
+          }
         }
         break;
       case tvKey.KEY_ENTER:
@@ -269,18 +320,23 @@ window.home_episodes = {
           $(`.${home_episodes.id}.${home_episodes.id}_content .option.active`)
         );
         if (current > 0) {
-          video.init(
-            home_episodes.data.episodes[
-              $(".episodes .episodes-list")[0].slick.currentSlide
-            ]
-          );
+          var epListEl = $(".episodes .episodes-list")[0];
+          var epItem =
+            epListEl && epListEl.slick && home_episodes.data.episodes
+              ? home_episodes.data.episodes[epListEl.slick.currentSlide]
+              : null;
+          if (epItem) {
+            video.init(epItem);
+          }
         } else {
           options = $(`.seasons-list .season`);
           current = options.index($(`.seasons-list .season.selected`));
 
           options.removeClass("active");
           options.eq(current).addClass("active");
-          home_episodes.load(home_episodes.data.seasons[current]);
+          if (home_episodes.data.seasons && home_episodes.data.seasons[current]) {
+            home_episodes.load(home_episodes.data.seasons[current]);
+          }
         }
         break;
     }

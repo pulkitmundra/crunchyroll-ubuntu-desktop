@@ -25,7 +25,14 @@ window.service = {
       headers: headers,
       body: params,
     })
-      .then((response) => response.json())
+      .then((response) =>
+        response.json().then((json) => {
+          if (!response.ok || !json || !json.access_token) {
+            throw json || new Error(`HTTP ${response.status}`);
+          }
+          return json;
+        }),
+      )
       .then((json) => request.success && request.success(json))
       .catch((error) => {
         console.log(error);
@@ -38,20 +45,39 @@ window.service = {
     headers.append("Authorization", service.api.auth);
     headers.append("Content-Type", "application/x-www-form-urlencoded");
 
-    var params = service.format({
-      refresh_token: session.storage.refresh_token,
-      grant_type: "refresh_token",
+    var hasProfile = Boolean(
+      session.storage &&
+        session.storage.profile_id &&
+        typeof session.storage.profile_id === "string"
+    );
+    var payload = {
+      refresh_token:
+        (request && request.data && request.data.refresh_token) ||
+        session.storage.refresh_token,
+      grant_type: hasProfile ? "refresh_token_profile_id" : "refresh_token",
       scope: "offline_access",
-    });
+    };
+    if (hasProfile) {
+      payload.profile_id = session.storage.profile_id;
+    }
+
+    var params = service.format(payload);
 
     fetch(`${service.api.url}/auth/v1/token`, {
       method: "POST",
       headers: headers,
       body: params,
     })
-      .then((response) => response.json())
-      .then((json) => request.success(json))
-      .catch((error) => request.error(error));
+      .then((response) =>
+        response.json().then((json) => {
+          if (!response.ok || !json || !json.access_token) {
+            throw json || new Error(`HTTP ${response.status}`);
+          }
+          return json;
+        }),
+      )
+      .then((json) => request.success && request.success(json))
+      .catch((error) => request.error && request.error(error));
   },
 
   profile: function (request) {
@@ -64,9 +90,15 @@ window.service = {
         fetch(`${service.api.url}/accounts/v1/me/profile`, {
           headers: headers,
         })
-          .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -81,9 +113,15 @@ window.service = {
         fetch(`${service.api.url}/accounts/v1/me/multiprofile`, {
           headers: headers,
         })
-          .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -101,8 +139,11 @@ window.service = {
           body: JSON.stringify(request.data),
         })
           .then((response) => null)
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -126,11 +167,21 @@ window.service = {
           headers: headers,
           body: params,
         })
-          .then((response) => response.json())
+          .then((response) =>
+            response.json().then((json) => {
+              if (!response.ok || !json || !json.access_token) {
+                throw json || new Error(`HTTP ${response.status}`);
+              }
+              return json;
+            }),
+          )
           .then((json) => {
-            return request.success(json);
+            return request.success && request.success(json);
           })
-          .catch((error) => request.error(error));
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -146,8 +197,11 @@ window.service = {
           headers: headers,
         })
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -166,8 +220,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -186,8 +243,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -206,8 +266,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -225,11 +288,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
       },
       error: function (error) {
-        request.error(error);
+        request.error && request.error(error);
       },
     });
   },
@@ -247,11 +310,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
       },
       error: function (error) {
-        request.error(error);
+        request.error && request.error(error);
       },
     });
   },
@@ -266,8 +329,11 @@ window.service = {
           headers: headers,
         })
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -285,11 +351,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
       },
       error: function (error) {
-        request.error(error);
+        request.error && request.error(error);
       },
     });
   },
@@ -301,14 +367,39 @@ window.service = {
         headers.append("Authorization", `Bearer ${storage.access_token}`);
         headers.append("Content-Type", "application/x-www-form-urlencoded");
         fetch(
-          `${service.api.url}/content/v2/discover/search?q=${request.data.query}&type=series,movie_listing&n=100&locale=${storage.language}`,
+          `${service.api.url}/content/v2/discover/search?q=${encodeURIComponent(request.data.query)}&type=series,movie_listing&n=100&ratings=true&locale=${storage.language}`,
           {
             headers: headers,
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  seriesInfo: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/x-www-form-urlencoded");
+        fetch(
+          `${service.api.url}/content/v2/cms/objects/${request.data.id}?ratings=true&preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            headers: headers,
+          },
+        )
+          .then((response) => response.json())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -326,8 +417,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -347,8 +441,11 @@ window.service = {
           },
         )
           .then((response) => response.text())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -362,8 +459,8 @@ window.service = {
       }`,
     )
       .then((response) => response.json())
-      .then((json) => request.success(json))
-      .catch((error) => request.error(error));
+      .then((json) => request.success && request.success(json))
+      .catch((error) => request.error && request.error(error));
   },
 
   intro: function (request) {
@@ -371,8 +468,8 @@ window.service = {
       `${service.api.static}/skip-events/production/${request.data.id}.json`,
     )
       .then((response) => response.json())
-      .then((json) => request.success(json))
-      .catch((error) => request.error(error));
+      .then((json) => request.success && request.success(json))
+      .catch((error) => request.error && request.error(error));
   },
 
   categories: function (request) {
@@ -388,8 +485,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -407,8 +507,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -426,8 +529,129 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  createCustomList: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/custom-lists?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ title: request.data.title }),
+          },
+        )
+          .then((response) => response.json())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  addCustomListItem: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/custom-lists/${request.data.list_id}?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ content_id: request.data.content_id }),
+          },
+        )
+          .then((response) => response.text())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  removeCustomListItem: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/custom-lists/${request.data.list_id}/${request.data.content_id}?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "DELETE",
+            headers: headers,
+          },
+        )
+          .then((response) => response.text())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  deleteCustomList: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/custom-lists/${request.data.list_id}?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "DELETE",
+            headers: headers,
+          },
+        )
+          .then((response) => response.text())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  renameCustomList: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/custom-lists/${request.data.list_id}?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "PATCH",
+            headers: headers,
+            body: JSON.stringify({ title: request.data.title }),
+          },
+        )
+          .then((response) => response.text())
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -439,14 +663,17 @@ window.service = {
         headers.append("Authorization", `Bearer ${storage.access_token}`);
         headers.append("Content-Type", "application/json");
         fetch(
-          `${service.api.url}/content/v2/discover/${storage.id}/watchlist?order=desc&n=1000&preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          `${service.api.url}/content/v2/discover/${storage.id}/watchlist?order=desc&n=1000&ratings=true&preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
           {
             headers: headers,
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -464,8 +691,11 @@ window.service = {
           },
         )
           .then((response) => response.json())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -485,8 +715,11 @@ window.service = {
           },
         )
           .then((response) => response.text())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },
@@ -505,8 +738,11 @@ window.service = {
           },
         )
           .then((response) => response.text())
-          .then((json) => request.success(json))
-          .catch((error) => request.error(error));
+          .then((json) => request.success && request.success(json))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
       },
     });
   },

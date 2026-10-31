@@ -21,7 +21,11 @@ window.search = {
     search_element.innerHTML = `
       <div class="content">
         <div class="input focus" id="search-screen_input">
-          <input type="text" tabindex="-1" placeholder="${translate.go('search.placeholder')}">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" tabindex="1" spellcheck="false" placeholder="${translate.go("search.placeholder")}">
+          <button type="button" id="search-clear-btn" tabindex="-1" title="Clear search">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
         <div class="list-container">
           <div class="list-container-over" style="grid-template-columns: repeat(${search.items_per_row}, 1fr);"></div>
@@ -32,22 +36,41 @@ window.search = {
       </div>`;
 
     document.body.appendChild(search_element);
-    search.input = document.getElementById(
-      "search-screen_input"
-    ).firstElementChild;
+    var inputBox = document.getElementById("search-screen_input");
+    search.input = inputBox ? inputBox.querySelector("input") : null;
+    var clearBtn = document.getElementById("search-clear-btn");
     var liveSearchTimer = null;
-    search.input.addEventListener("input", function () {
-      if (liveSearchTimer) clearTimeout(liveSearchTimer);
-      liveSearchTimer = setTimeout(function () {
-        if (
-          document.getElementById(search.id) &&
-          search.input &&
-          search.input.value.trim().length >= 2
-        ) {
-          search.start();
+    if (search.input) {
+      search.input.addEventListener("input", function () {
+        if (clearBtn) {
+          clearBtn.style.display = search.input.value.length > 0 ? "inline-flex" : "none";
         }
-      }, 450);
-    });
+        if (liveSearchTimer) clearTimeout(liveSearchTimer);
+        liveSearchTimer = setTimeout(function () {
+          if (
+            document.getElementById(search.id) &&
+            search.input &&
+            search.input.value.trim().length >= 2
+          ) {
+            search.start();
+          }
+        }, 450);
+      });
+      setTimeout(function () {
+        if (search.input) search.input.focus();
+      }, 50);
+    }
+    if (clearBtn && search.input) {
+      clearBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        search.input.value = "";
+        clearBtn.style.display = "none";
+        $(".list-container-over").html("");
+        search.data.result = [];
+        search.toggleFocus(-1);
+        search.input.focus();
+      });
+    }
   },
 
   destroy: function () {
@@ -55,21 +78,47 @@ window.search = {
     $("[id='search-screen']").remove();
   },
 
+  _reqId: 0,
+
   start: function () {
+    if (!search.input || !search.input.value.trim()) return;
+    var currentReq = ++search._reqId;
     loading.start();
     service.search({
       data: {
-        query: search.input.value,
+        query: search.input.value.trim(),
       },
       success: function (response) {
+        if (currentReq !== search._reqId) return;
         loading.end();
         search.data.result = mapper.search(response);
         var elements_content = "";
+        if (!search.data.result || search.data.result.length === 0) {
+          $(".list-container-over").html(
+            `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${search.input.value.trim().replace(/[<>&"]/g, "")}"</div>`
+          );
+          search.last_postion = 0;
+          search.scroll_data.rows = 0;
+          return;
+        }
+        var esc =
+          typeof mapper !== "undefined" && mapper.escapeHtml
+            ? mapper.escapeHtml
+            : function (s) {
+                return String(s == null ? "" : s);
+              };
         search.data.result.forEach((element, index) => {
+          var badges =
+            typeof mapper !== "undefined" && mapper.formatCardBadges
+              ? mapper.formatCardBadges(element)
+              : "";
           elements_content += `
               <div class="item${index === 0 ? " selected" : ""}">
-                <img src="${element.poster}" alt="">
-                <div class="title">${element.title}</div>
+                <div class="search-poster-wrap">
+                  <img src="${esc(element.poster)}" alt="">
+                  ${badges}
+                </div>
+                <div class="title">${esc(element.title)}</div>
               </div>`;
         });
 
@@ -85,6 +134,7 @@ window.search = {
         );
       },
       error: function (error) {
+        if (currentReq !== search._reqId) return;
         loading.end();
         console.log(error);
       },
@@ -92,31 +142,41 @@ window.search = {
   },
 
   toggleFocus: function (newIndex) {
-    if (newIndex < 0) {
+    if (newIndex < 0 || !search.data.result || search.data.result.length === 0) {
       $("#search-screen_input").addClass("focus");
-      $(".list-container").removeClass("focus");
-      search.last_postion = search.position >= 0 ? search.position : search.last_postion
-      newIndex = -1
+      $(`#${search.id} .list-container`).removeClass("focus");
+      search.last_postion = search.position >= 0 ? search.position : search.last_postion;
+      newIndex = -1;
     } else {
-      if(search.position == -1) {
+      if (search.position == -1) {
         $("#search-screen_input").removeClass("focus");
-        $(".list-container").addClass("focus");
+        $(`#${search.id} .list-container`).addClass("focus");
       }
-      if (newIndex >= search.data.result.length) newIndex = search.data.result.length - 1
-      $(`.list-container .item`).removeClass("selected");
-      $(`.list-container .item`).eq(newIndex).addClass("selected");
+      if (newIndex >= search.data.result.length) newIndex = search.data.result.length - 1;
+      $(`#${search.id} .list-container .item`).removeClass("selected");
+      $(`#${search.id} .list-container .item`).eq(newIndex).addClass("selected");
     }
-    search.position = newIndex
+    search.position = newIndex;
   },
-  
+
   scroll: function () {
-    if (search.data.result.length == 0) return
-    var current_row = Math.floor(search.position / search.items_per_row)
+    if (!search.data.result || search.data.result.length === 0 || search.position < 0) return;
+    var current_row = Math.floor(search.position / search.items_per_row);
+    var containerEl = $(`#${search.id} .list-container-over`).get(0);
+    if (!containerEl) return;
+    var firstItemEl = containerEl.querySelector(".item");
+    var rowPitch =
+      firstItemEl && firstItemEl.offsetHeight
+        ? firstItemEl.offsetHeight + 22
+        : search.scroll_data.item_height + search.scroll_data.item_padding;
     if (current_row < 2) {
-      $(".list-container-over").get(0).style.marginTop = '0px'
-    } else if ( !( current_row + 1 >= search.scroll_data.rows)) {
-      current_row = current_row - 1
-      $(".list-container-over").get(0).style.marginTop = `-${(current_row * (search.scroll_data.item_height + search.scroll_data.item_padding))}px`
+      containerEl.style.marginTop = "0px";
+    } else if (!(current_row + 1 >= search.scroll_data.rows)) {
+      current_row = current_row - 1;
+      containerEl.style.marginTop = `-${current_row * rowPitch}px`;
+    } else {
+      current_row = Math.max(0, search.scroll_data.rows - 2);
+      containerEl.style.marginTop = `-${current_row * rowPitch}px`;
     }
   },
 
@@ -126,50 +186,75 @@ window.search = {
         if (search.position === -1) {
           menu.open();
         } else {
-          search.toggleFocus(-1)
+          search.toggleFocus(-1);
         }
         break;
       case tvKey.KEY_NEXT:
         break;
       case tvKey.KEY_UP:
-        search.toggleFocus(search.position - search.items_per_row)
-        search.scroll()
+        search.toggleFocus(search.position - search.items_per_row);
+        search.scroll();
         break;
       case tvKey.KEY_DOWN:
-        var to_index = search.position + search.items_per_row
-        if(search.position == -1) to_index = search.last_postion
-        search.toggleFocus(to_index)
+        if (!search.data.result || search.data.result.length === 0) break;
+        var to_index = search.position + search.items_per_row;
+        if (search.position == -1) to_index = search.last_postion || 0;
+        search.toggleFocus(to_index);
         search.scroll();
         break;
       case tvKey.KEY_LEFT:
-        if(search.position % search.items_per_row == 0) 
-          menu.open()
-        else 
-          search.toggleFocus(search.position - 1)
+        if (search.position <= 0 || search.position % search.items_per_row == 0)
+          menu.open();
+        else
+          search.toggleFocus(search.position - 1);
         break;
       case tvKey.KEY_RIGHT:
-        if((search.position + 1) % search.items_per_row == 0) return
-        search.toggleFocus(search.position + 1)
+        if (
+          search.position < 0 ||
+          !search.data.result ||
+          search.data.result.length === 0 ||
+          (search.position + 1) % search.items_per_row == 0
+        )
+          return;
+        search.toggleFocus(search.position + 1);
         break;
       case tvKey.KEY_ENTER:
       case tvKey.KEY_PANEL_ENTER:
         if (this.position === -1) {
-          keyboard.init(search.input, search.start);
+          if (search.input && search.input.value.trim().length > 0) {
+            search.start();
+          } else if (search.input) {
+            search.input.focus();
+          }
         } else {
+          var targetItem = search.data.result && search.data.result[search.position];
+          if (!targetItem || !targetItem.id) break;
           home_details.init(
-            search.data.result[search.position],
+            targetItem,
             function (item) {
+              var esc =
+                typeof mapper !== "undefined" && mapper.escapeHtml
+                  ? mapper.escapeHtml
+                  : function (s) {
+                      return String(s == null ? "" : s);
+                    };
+              $("[id='home-screen']").remove();
               var home_element = document.createElement("div");
               home_element.id = home.id;
               home_element.innerHTML = `
             <div class="content">
               <div class="details full">
                 <div class="background">
-                  <img src="${item.background}">
+                  <img src="${esc(item.background)}">
                 </div>
                 <div class="info">
-                  <div class="title resize">${item.title}</div>
-                  <div class="description resize">${item.description}</div>
+                  <div class="title resize">${esc(item.title)}</div>
+                  <div class="cr-meta-row" id="hero-meta-row">${
+                    typeof mapper !== "undefined" && mapper.formatMetaBadges
+                      ? mapper.formatMetaBadges(item)
+                      : ""
+                  }</div>
+                  <div class="description resize">${esc(item.description)}</div>
                   <div class="buttons">
                     <a class="selected">${translate.go("home.banner.play")}</a>
                     <a>${translate.go("home.banner.info")}</a>
@@ -184,18 +269,12 @@ window.search = {
               var sEl = document.getElementById(search.id);
               if (sEl) sEl.style.display = "none";
               document.body.appendChild(home_element);
-
-              var title = $(".details .info .title")[0];
-              title.style.fontSize = title.scrollHeight > title.clientHeight ? '3.5vh' : '5vh';
-
-              var description = $(".details .info .description")[0];
-              description.style.fontSize = description.scrollHeight > description.clientHeight ? '2vh' : '2.5vh';
             },
             function () {
+              home.destroy();
               var sEl = document.getElementById(search.id);
               if (sEl) {
                 sEl.style.display = "block";
-                home.destroy();
                 search.toggleFocus(search.position);
               }
             }

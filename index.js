@@ -29,12 +29,17 @@ function updateZoom(win) {
 function notifyMode(win) {
   if (!win || win.isDestroyed()) return;
   const bounds = win.getContentBounds();
-  const isCompact = isMiniPlayer || bounds.width < 1000;
+  const scale =
+    bounds.width > 0 && bounds.height > 0
+      ? Math.max(0.15, Math.min(bounds.width / 1920, bounds.height / 1080))
+      : 1;
+  const isCompact = isMiniPlayer || bounds.width <= 720 || bounds.height <= 420;
   win.webContents.send("windowModeChanged", {
     isMiniPlayer,
     isPinned,
     isFullScreen: win.isFullScreen(),
     isCompact,
+    scale,
   });
 }
 
@@ -88,10 +93,10 @@ function isValidMiniBounds(b) {
     b &&
     typeof b.width === "number" &&
     typeof b.height === "number" &&
-    b.width >= 300 &&
-    b.width <= 950 &&
-    b.height >= 170 &&
-    b.height <= 650
+    b.width >= 280 &&
+    b.width <= 1400 &&
+    b.height >= 160 &&
+    b.height <= 900
   );
 }
 
@@ -105,32 +110,33 @@ function isValidNormalBounds(b) {
   );
 }
 
-function isCursorActivelyOnMiniWindow(win) {
-  if (!win || win.isDestroyed()) return false;
-  const cursor = screen.getCursorScreenPoint();
-  if (
-    cursorAtBlur &&
-    cursor.x === cursorAtBlur.x &&
-    cursor.y === cursorAtBlur.y
-  ) {
-    // XWayland pointer has not moved onto the mini-player since blur
-    return false;
-  }
-  const b = win.getBounds();
-  const frameTop = 55;
-  const frameSide = 18;
-  return (
-    cursor.x >= b.x - frameSide &&
-    cursor.x <= b.x + b.width + frameSide &&
-    cursor.y >= b.y - frameTop &&
-    cursor.y <= b.y + b.height + frameSide
-  );
-}
-
 function applyAlwaysOnTop(win, enable) {
   if (!win || win.isDestroyed()) return;
   win.setAlwaysOnTop(enable, "screen-saver");
   win.setVisibleOnAllWorkspaces(enable, { visibleOnFullScreen: true });
+}
+
+function enforceMiniWindowDecoratedState(win, restoreBounds) {
+  if (!win || win.isDestroyed() || !isMiniPlayer) return;
+  if (win.isFullScreen()) {
+    win.setFullScreen(false);
+  }
+  if (win.isMaximized()) {
+    win.unmaximize();
+  }
+  win.setFullScreenable(true);
+  win.setResizable(true);
+  if (typeof win.setMovable === "function") {
+    win.setMovable(true);
+  }
+  win.setMinimumSize(320, 180);
+  if (restoreBounds) {
+    win.setBounds(restoreBounds);
+  }
+  if (!win.isAlwaysOnTop()) {
+    applyAlwaysOnTop(win, true);
+  }
+  updateZoom(win);
 }
 
 function shrinkToFloatingWindow(win, targetWidth = 560, targetHeight = 315) {
@@ -171,43 +177,27 @@ function shrinkToFloatingWindow(win, targetWidth = 560, targetHeight = 315) {
     }
     setTimeout(() => {
       if (win.isDestroyed() || !isMiniPlayer) return;
-      if (win.isFullScreen()) {
-        win.setFullScreen(false);
-      }
-      if (win.isMaximized()) {
-        win.unmaximize();
-      }
-      win.setBounds(restoreBounds);
-      if (!win.isAlwaysOnTop()) {
-        applyAlwaysOnTop(win, true);
-      }
-      cursorAtBlur = screen.getCursorScreenPoint();
-      updateZoom(win);
+      enforceMiniWindowDecoratedState(win, restoreBounds);
       setTimeout(() => {
         if (!win.isDestroyed() && isMiniPlayer) {
-          if (win.getBounds().width > 950) {
-            win.setBounds(restoreBounds);
-          }
-          cursorAtBlur = screen.getCursorScreenPoint();
-          updateZoom(win);
+          enforceMiniWindowDecoratedState(
+            win,
+            win.getBounds().width > 1400 || win.isFullScreen()
+              ? restoreBounds
+              : null
+          );
         }
         isTransitioning = false;
-      }, 110);
-    }, 45);
+      }, 140);
+    }, 65);
   } else {
-    win.setBounds(restoreBounds);
-    if (!win.isAlwaysOnTop()) {
-      applyAlwaysOnTop(win, true);
-    }
-    cursorAtBlur = screen.getCursorScreenPoint();
-    updateZoom(win);
+    enforceMiniWindowDecoratedState(win, restoreBounds);
     setTimeout(() => {
       if (!win.isDestroyed() && isMiniPlayer) {
-        cursorAtBlur = screen.getCursorScreenPoint();
-        updateZoom(win);
+        enforceMiniWindowDecoratedState(win, null);
       }
       isTransitioning = false;
-    }, 80);
+    }, 90);
   }
 }
 
@@ -223,6 +213,11 @@ function expandFromFloatingToFull(win, keepPinned = true) {
 
   if (win.isMaximized() && (wasFullScreenBeforeMini || keepPinned)) {
     win.unmaximize();
+  }
+
+  win.setResizable(true);
+  if (typeof win.setMovable === "function") {
+    win.setMovable(true);
   }
 
   if (wasFullScreenBeforeMini) {
@@ -250,7 +245,7 @@ function expandFromFloatingToFull(win, keepPinned = true) {
       updateZoom(win);
     }
     isTransitioning = false;
-  }, 80);
+  }, 90);
 }
 
 function toggleMiniPlayerMode(win) {
@@ -262,11 +257,13 @@ function toggleMiniPlayerMode(win) {
   } else {
     expandFromFloatingToFull(win, false);
   }
+  const b = win.getContentBounds();
   return {
     isMiniPlayer,
     isPinned,
     isFullScreen: win.isFullScreen(),
-    isCompact: isMiniPlayer,
+    isCompact: isMiniPlayer || b.width <= 720 || b.height <= 420,
+    scale: isMiniPlayer ? 560 / 1920 : Math.max(0.15, Math.min(b.width / 1920, b.height / 1080)),
   };
 }
 
@@ -289,11 +286,13 @@ function togglePinMode(win) {
     applyAlwaysOnTop(win, true);
   }
   notifyMode(win);
+  const b = win.getContentBounds();
   return {
     isMiniPlayer,
     isPinned,
     isFullScreen: win.isFullScreen(),
-    isCompact: isMiniPlayer || win.getContentBounds().width < 1000,
+    isCompact: isMiniPlayer || b.width <= 720 || b.height <= 420,
+    scale: Math.max(0.15, Math.min(b.width / 1920, b.height / 1080)),
   };
 }
 
@@ -440,6 +439,15 @@ function createWindow() {
     updateZoom(win);
   });
 
+  win.on("enter-full-screen", () => {
+    if (isMiniPlayer && !win.isDestroyed()) {
+      const restoreBounds = isValidMiniBounds(lastFloatingBounds)
+        ? lastFloatingBounds
+        : getDefaultMiniBounds(win, 560, 315);
+      enforceMiniWindowDecoratedState(win, restoreBounds);
+    }
+  });
+
   win.on("resize", () => {
     if (!isTransitioning && focusRestoreTimer) {
       clearTimeout(focusRestoreTimer);
@@ -449,14 +457,7 @@ function createWindow() {
     if (!isTransitioning && !win.isMaximized() && !win.isFullScreen()) {
       const b = win.getBounds();
       if (isMiniPlayer) {
-        // Only update width/height if the user explicitly resized the mini-player by a large drag
-        // (ignores X11 client-vs-frame 31x42px decoration offset so mini-player never shrinks)
-        const baseW = (lastFloatingBounds && lastFloatingBounds.width) || 560;
-        const baseH = (lastFloatingBounds && lastFloatingBounds.height) || 315;
-        if (
-          isValidMiniBounds(b) &&
-          (Math.abs(b.width - baseW) > 50 || Math.abs(b.height - baseH) > 55)
-        ) {
+        if (Date.now() - lastShrinkTime > 380 && isValidMiniBounds(b)) {
           lastFloatingBounds = {
             x: b.x,
             y: b.y,
@@ -483,13 +484,18 @@ function createWindow() {
     if (!isTransitioning && !win.isMaximized() && !win.isFullScreen()) {
       const b = win.getBounds();
       if (isMiniPlayer) {
-        // Preserve fixed mini-player width & height so X11 frame offset never shrinks the window
-        lastFloatingBounds = {
-          x: b.x,
-          y: b.y,
-          width: (lastFloatingBounds && lastFloatingBounds.width) || 560,
-          height: (lastFloatingBounds && lastFloatingBounds.height) || 315,
-        };
+        if (Date.now() - lastShrinkTime > 380) {
+          lastFloatingBounds = {
+            x: b.x,
+            y: b.y,
+            width: isValidMiniBounds(b)
+              ? b.width
+              : (lastFloatingBounds && lastFloatingBounds.width) || 560,
+            height: isValidMiniBounds(b)
+              ? b.height
+              : (lastFloatingBounds && lastFloatingBounds.height) || 315,
+          };
+        }
       } else if (isValidNormalBounds(b)) {
         savedBounds = {
           x: b.x,
@@ -502,7 +508,7 @@ function createWindow() {
   });
 
   // When switching to another app (Alt+Tab or clicking another window) while Pinned on Top:
-  // Shrink to a floating window in 1 synchronous step and keep it in front.
+  // Shrink to a floating window in 1 step and keep it in front.
   win.on("blur", () => {
     if (focusRestoreTimer) {
       clearTimeout(focusRestoreTimer);
@@ -523,30 +529,18 @@ function createWindow() {
     shrinkToFloatingWindow(win, 560, 315);
   });
 
-  // When returning to Crunchyroll via Alt+Tab or clicking the app icon on the Ubuntu Nav Bar:
-  // Expand back to full screen immediately in 1 step, unless the user clicked/dragged the mini window.
+  // When focusing the Mini Player (e.g. clicking its titlebar to drag, grabbing its border to resize,
+  // or clicking inside the player): keep it in Mini Player mode and ensure it is movable & resizable.
+  // Users can expand to Fullscreen anytime via Maximize [ ], double-clicking the video/titlebar, F9, or F11.
   win.on("focus", () => {
     if (focusRestoreTimer) {
       clearTimeout(focusRestoreTimer);
       focusRestoreTimer = null;
     }
-    const now = Date.now();
-    if (!isPinned || win.isDestroyed() || isTransitioning) return;
-    if (now - lastShrinkTime < 420) return;
-    if (!isMiniPlayer) return;
-
-    const clickedInsideContent = now - lastInternalPointerTime < 350;
-    const cursorOnMiniOrTitleBar = isCursorActivelyOnMiniWindow(win);
-
-    // If the user clicked inside the mini window or tapped/dragged its top titlebar/borders,
-    // keep it as the small floating window so they can interact or drag it around.
-    if (clickedInsideContent || cursorOnMiniOrTitleBar) {
-      return;
+    if (win.isDestroyed() || isTransitioning) return;
+    if (isMiniPlayer) {
+      enforceMiniWindowDecoratedState(win, null);
     }
-
-    // Otherwise focus came from Alt+Tab or clicking the icon on the Ubuntu Nav Bar:
-    // Expand immediately in 1 single step.
-    expandFromFloatingToFull(win, true);
   });
 
   win.webContents.on("before-input-event", (event, input) => {
@@ -567,7 +561,22 @@ function createWindow() {
     }
   });
 
-  ipcMain.on("internalPointerInteraction", () => {
+  const ALLOWED_EXTERNAL_HOSTS = new Set([
+    "github.com",
+    "pulkit-mundra-portfolio.vercel.app",
+    "www.flaticon.com",
+  ]);
+
+  function isTrustedSender(event) {
+    return Boolean(
+      event &&
+        !win.isDestroyed() &&
+        event.sender === win.webContents
+    );
+  }
+
+  ipcMain.on("internalPointerInteraction", (event) => {
+    if (!isTrustedSender(event)) return;
     lastInternalPointerTime = Date.now();
     lastHoverTime = Date.now();
     isHoveringWindow = true;
@@ -577,21 +586,48 @@ function createWindow() {
     }
   });
 
-  ipcMain.on("internalPointerHover", (_, hovering) => {
+  ipcMain.on("internalPointerHover", (event, hovering) => {
+    if (!isTrustedSender(event)) return;
     isHoveringWindow = Boolean(hovering);
     if (hovering) {
       lastHoverTime = Date.now();
     }
   });
 
-  ipcMain.handle("toggleMiniPlayer", () => toggleMiniPlayerMode(win));
-  ipcMain.handle("toggleAlwaysOnTop", () => togglePinMode(win));
-  ipcMain.handle("toggleFullScreen", () => toggleFullScreenMode(win));
+  ipcMain.handle("toggleMiniPlayer", (event) => {
+    if (!isTrustedSender(event)) return null;
+    return toggleMiniPlayerMode(win);
+  });
+  ipcMain.handle("toggleAlwaysOnTop", (event) => {
+    if (!isTrustedSender(event)) return null;
+    return togglePinMode(win);
+  });
+  ipcMain.handle("toggleFullScreen", (event) => {
+    if (!isTrustedSender(event)) return null;
+    return toggleFullScreenMode(win);
+  });
 
-  ipcMain.on("gamepadButtonPress", (_, buttonName) => {
+  ipcMain.on("openExternal", (event, url) => {
+    if (!isTrustedSender(event) || typeof url !== "string") return;
+    try {
+      const parsed = new URL(url);
+      if (
+        parsed.protocol === "https:" &&
+        ALLOWED_EXTERNAL_HOSTS.has(parsed.hostname.toLowerCase()) &&
+        electron.shell &&
+        typeof electron.shell.openExternal === "function"
+      ) {
+        electron.shell.openExternal(parsed.toString());
+      }
+    } catch (_) {}
+  });
+
+  ipcMain.on("gamepadButtonPress", (event, buttonName) => {
+    if (!isTrustedSender(event)) return;
     handleGamepadButtonPress(win, buttonName);
   });
-  ipcMain.on("exitApp", () => {
+  ipcMain.on("exitApp", (event) => {
+    if (!isTrustedSender(event)) return;
     app.quit();
   });
 }
@@ -646,7 +682,7 @@ function handleGamepadButtonPress(mainWindow, buttonName) {
       type: "keyDown",
       keyCode: "enter",
     });
-    mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "space" });
+    mainWindow.webContents.sendInputEvent({ type: "keyUp", keyCode: "enter" });
   } else if (buttonName === "dPadDown" || buttonName === "down") {
     mainWindow.webContents.sendInputEvent({
       type: "keyDown",

@@ -1,8 +1,24 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v1.1.6",
-    changes: [],
+    version: "v2.0.0",
+    changes: [
+      {
+        title: "Star Ratings, Sub | Dub Badges & Custom Lists",
+        description:
+          "Added Crunchyroll star ratings, Sub | Dub badges on cards and banners, and a Manage Lists modal for Watchlist and Custom Lists.",
+      },
+      {
+        title: "Skip Credits, Skip Recap & Episode Drawer (E)",
+        description:
+          "Added Skip Recap and Skip Credits alongside Skip Intro, plus an in-player Season Episode Drawer (press E or click the list icon).",
+      },
+      {
+        title: "Premium Scrubber, Full-Pill Volume Drag & Redesigned Login/About",
+        description:
+          "Upgraded the progress bar with hover timestamp preview, full-pill volume drag, frosted-glass Login screen, and Pulkit Mundra v2.0.0 About section.",
+      },
+    ],
   },
 
   init: function () {

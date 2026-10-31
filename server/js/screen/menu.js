@@ -58,6 +58,15 @@ window.menu = {
   previous: NaN,
   isOpen: false,
 
+  escapeHtml: function (str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  },
+
   init: function (reset) {
     var menu_element = document.createElement("div");
     menu_element.id = this.id;
@@ -91,18 +100,27 @@ window.menu = {
       }
     });
 
+    var rawAvatar = String(
+      (session.storage &&
+        session.storage.account &&
+        session.storage.account.avatar) ||
+        "0001-cr-white-orange.png"
+    );
+    var safeAvatar = /^[A-Za-z0-9._-]+$/.test(rawAvatar)
+      ? rawAvatar
+      : "0001-cr-white-orange.png";
+    var safeProfileName = menu.escapeHtml(session.get_active_profile_name());
+
     menu_element.innerHTML = `
     <div class="content">
       <div class="options">
         <div class="option profile ${session.storage.account.premium ? "premium" : ""}">
           <div class="avatar">
-            <img src="https://static.crunchyroll.com/assets/avatar/170x170/${
-              session.storage.account.avatar
-            }">
+            <img src="https://static.crunchyroll.com/assets/avatar/170x170/${safeAvatar}">
           </div>
           <div class="profile-text">
             <div class="profile-name">
-              <span id="active-profile-name">${session.get_active_profile_name()}</span>
+              <span id="active-profile-name">${safeProfileName}</span>
               <i class="fa-solid fa-crown"></i>
             </div>
             <div class="profile-change">${translate.go('profiles.change')}</div>
@@ -127,6 +145,25 @@ window.menu = {
 
   open: function () {
     if (
+      (typeof login !== "undefined" && document.getElementById(login.id)) ||
+      (typeof profilesScreen !== "undefined" &&
+        document.getElementById(profilesScreen.id)) ||
+      typeof session === "undefined" ||
+      !session.storage ||
+      !session.storage.access_token
+    ) {
+      return;
+    }
+    if (
+      !document.getElementById(this.id) &&
+      typeof session !== "undefined" &&
+      session.storage &&
+      session.storage.access_token &&
+      session.storage.account
+    ) {
+      this.init();
+    }
+    if (
       main.state &&
       main.state !== this.id &&
       (typeof exit === "undefined" || main.state !== exit.id)
@@ -134,10 +171,14 @@ window.menu = {
       this.previous = main.state;
     }
     menu.isOpen = true;
+    document.body.classList.remove("hide-cursor");
     $("body").addClass("open-menu");
     $(`#${menu.id} .option`).removeClass("focus");
     $(`#${menu.id} .option.selected`).addClass("focus");
     main.state = this.id;
+    if (typeof window.updateBackBtnVisibility === "function") {
+      window.updateBackBtnVisibility();
+    }
   },
 
   close: function () {
@@ -148,6 +189,9 @@ window.menu = {
       main.state = main.resolveState() || this.previous;
     } else {
       main.state = this.previous;
+    }
+    if (typeof window.updateBackBtnVisibility === "function") {
+      window.updateBackBtnVisibility();
     }
   },
 
@@ -175,7 +219,6 @@ window.menu = {
       case tvKey.IS_KEY_BACK(event.keyCode):
       case 27:
         menu.close();
-        exit.init();
         break;
       case tvKey.KEY_UP:
         var options = $(`#${menu.id} .option`);
@@ -217,6 +260,7 @@ window.menu = {
           var selected = options.index($(`#${menu.id} .option.selected`));
           options.removeClass("selected");
           options.eq(current).addClass("selected");
+          menu.selected = current;
           this.previous = window[menu.options[current].id].id;
           if (
             selected >= 0 &&
@@ -237,6 +281,14 @@ window.menu = {
               scr.destroy();
             }
           });
+          if (
+            typeof home !== "undefined" &&
+            home.fromCategory &&
+            menu.options[current].id !== "home"
+          ) {
+            home.fromCategory.state = false;
+            home.fromCategory.index = NaN;
+          }
           test = menu.options[current].action.split(".");
           window[test[0]][test[1]]();
           menu.close();
