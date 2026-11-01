@@ -4,7 +4,7 @@ window.session = {
     subtitles: {},
   },
   storage: {
-    version: "v2.0.0",
+    version: "v2.0.1",
     language: NaN,
     quality: "auto",
     account: {

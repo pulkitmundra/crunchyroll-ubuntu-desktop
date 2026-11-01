@@ -120,7 +120,8 @@ flowchart LR
   - Displays Crunchyroll Star Rating pills (`4.9 (120K)`), `Sub | Dub` / `Sub` / `Dub` audio badges, maturity ratings, season/episode counts, and genre chips across the Home hero banner, Anime Details, My List, and poster/episode cards.
 - **Custom Lists ("Crunchylists") & Watchlist Manager**:
   - Click **Manage Lists** on the Anime Details screen to toggle Watchlist membership, add/remove the series across any of your Custom Lists ("Crunchylists"), create new Custom Lists, or delete Custom Lists.
-  - Hover any card in **My List** (`Watchlist` or Custom Lists) to access a 1-click quick-remove trash button (`.mylist-quick-remove`).
+  - Hover any card in **My List** (`Watchlist` or Custom Lists) to access a 1-click quick-remove trash button (`.mylist-quick-remove`), or click **Delete List** on any Custom List row header.
+  - Includes a safety confirmation dialog (`#cr-confirm-modal`) before deleting any Custom List and frosted confirmation toast notifications (`#cr-toast-container`) whenever items are added/removed or lists are created/deleted.
 
 </details>
 

@@ -2,6 +2,19 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.0.1] - 2026-11-01
+
+### Added
+- **Delete Custom List Confirmation Dialog (`#cr-confirm-modal`) & My List Row Delete Action (`js/app.js`, `css/app.css`, `server/js/screen/home.details.js`, `server/js/screen/mylist.js`, `server/css/mylist.css`):**
+  - Added a frosted-glass confirmation dialog (`"Delete Custom List? - Do you really want to delete <List Name>?"` with `Cancel` and `Delete List` actions, supporting both mouse and keyboard navigation) whenever deleting an entire Custom List from either the **Manage Lists** modal or the **My List** screen.
+  - Added a **Delete List** button (`.mylist-delete-list-btn`) on Custom List row headers in the **My List** screen (`#mylist-screen`).
+- **Watchlist & Custom List Confirmation Toast Notifications (`#cr-toast-container` in `js/app.js`, `css/app.css`, `server/js/screen/home.details.js`, `server/js/screen/mylist.js`):**
+  - Added slide-in frosted confirmation toasts in the bottom-right corner (`2.6s` auto-dismiss) confirming every list operation: adding/removing an anime on the Watchlist, adding/removing an anime in a Custom List, creating a new Custom List, removing an item via the quick-remove trash button in **My List**, and deleting a Custom List.
+- **Empty List Name Validation on `Create & Add` (`server/js/screen/home.details.js`, `server/css/home.css`):**
+  - Clicking **Create & Add** (or pressing `Enter`) with an empty Custom List name input now displays `"Please enter a name for your custom list"`, focuses `#crunchylist-new-input`, and highlights the input with `.input-error`.
+
+---
+
 ## [v2.0.0] - 2026-10-31
 
 ### Added

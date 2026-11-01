@@ -314,23 +314,40 @@ window.home_details = {
     var createBtn = document.getElementById("crunchylist-create-btn");
     var newInput = document.getElementById("crunchylist-new-input");
     if (createBtn && newInput) {
+      var submitNewList = function () {
+        var name = newInput.value.trim();
+        if (!name) {
+          newInput.classList.add("input-error");
+          newInput.focus();
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              "Please enter a name for your custom list",
+              "error"
+            );
+          }
+          setTimeout(function () {
+            if (newInput) newInput.classList.remove("input-error");
+          }, 1600);
+          return;
+        }
+        newInput.classList.remove("input-error");
+        home_details.createNewCustomList(name);
+        newInput.value = "";
+      };
+      newInput.addEventListener("input", function () {
+        if (newInput.value.trim()) {
+          newInput.classList.remove("input-error");
+        }
+      });
       createBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        var name = newInput.value.trim();
-        if (name) {
-          home_details.createNewCustomList(name);
-          newInput.value = "";
-        }
+        submitNewList();
       });
       newInput.addEventListener("keydown", function (e) {
         if (e.keyCode === 13) {
           e.preventDefault();
           e.stopPropagation();
-          var name = newInput.value.trim();
-          if (name) {
-            home_details.createNewCustomList(name);
-            newInput.value = "";
-          }
+          submitNewList();
         } else if (e.keyCode === 27) {
           e.preventDefault();
           e.stopPropagation();
@@ -343,6 +360,9 @@ window.home_details = {
   },
 
   closeListManager: function () {
+    if (typeof window.closeConfirmDialog === "function") {
+      window.closeConfirmDialog();
+    }
     home_details.listModalOpen = false;
     $("#crunchylist-modal").remove();
   },
@@ -370,9 +390,20 @@ window.home_details = {
             <span class="crunchylist-status-pill">${home_details.inWatchList ? "In Watchlist - Click to Remove" : "+ Add to Watchlist"}</span>
           `;
         }
+        if (typeof window.showToast === "function") {
+          window.showToast(
+            (home_details.inWatchList ? 'Added "' : 'Removed "') +
+              (item.title || "Anime") +
+              (home_details.inWatchList ? '" to Watchlist' : '" from Watchlist'),
+            home_details.inWatchList ? "added" : "removed"
+          );
+        }
       },
       error: function (err) {
         console.log(err);
+        if (typeof window.showToast === "function") {
+          window.showToast("Failed to update Watchlist", "error");
+        }
       },
     });
   },
@@ -440,7 +471,7 @@ window.home_details = {
         var safeTitle = home_details.escapeHtml(lst.title || "");
         var safeId = home_details.escapeHtml(lst.list_id || "");
         return `
-        <div class="crunchylist-row custom-list-item ${isMember ? "active" : ""}" data-list-id="${safeId}" data-in-list="${isMember ? "1" : "0"}" data-count="${count}">
+        <div class="crunchylist-row custom-list-item ${isMember ? "active" : ""}" data-list-id="${safeId}" data-list-title="${safeTitle}" data-in-list="${isMember ? "1" : "0"}" data-count="${count}">
           <div class="crunchylist-row-left">
             <i class="${isMember ? "fa-solid fa-square-check" : "fa-regular fa-square"}"></i>
             <span>${safeTitle}</span>
@@ -461,6 +492,7 @@ window.home_details = {
     var item = home_details.data.this;
     if (!item || !rowEl) return;
     var listId = rowEl.getAttribute("data-list-id");
+    var listTitle = rowEl.getAttribute("data-list-title") || "Custom List";
     var inList = rowEl.getAttribute("data-in-list") === "1";
     var curCount = parseInt(rowEl.getAttribute("data-count") || "0", 10);
     var method = inList ? "removeCustomListItem" : "addCustomListItem";
@@ -485,19 +517,65 @@ window.home_details = {
         if (pillEl) {
           pillEl.textContent = nowInList ? "Added - Click to Remove" : "+ Add to List";
         }
+        if (typeof window.showToast === "function") {
+          window.showToast(
+            (nowInList ? 'Added "' : 'Removed "') +
+              (item.title || "Anime") +
+              (nowInList ? '" to "' : '" from "') +
+              listTitle +
+              '"',
+            nowInList ? "added" : "removed"
+          );
+        }
+      },
+      error: function () {
+        if (typeof window.showToast === "function") {
+          window.showToast('Failed to update "' + listTitle + '"', "error");
+        }
       },
     });
   },
 
-  deleteCustomListById: function (listId) {
+  deleteCustomListById: function (listId, listTitle) {
     if (!listId) return;
-    service.deleteCustomList({
-      data: { list_id: listId },
-      success: function () {
-        home_details.listsChanged = true;
-        home_details.refreshCustomLists();
-      },
-    });
+    var displayTitle = listTitle || "this custom list";
+    var performDelete = function () {
+      service.deleteCustomList({
+        data: { list_id: listId },
+        success: function () {
+          home_details.listsChanged = true;
+          home_details.refreshCustomLists();
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              'Deleted custom list "' + displayTitle + '"',
+              "removed"
+            );
+          }
+        },
+        error: function () {
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              'Failed to delete "' + displayTitle + '"',
+              "error"
+            );
+          }
+        },
+      });
+    };
+    if (typeof window.showConfirmDialog === "function") {
+      window.showConfirmDialog({
+        title: "Delete Custom List?",
+        message:
+          'Do you really want to delete "' +
+          displayTitle +
+          '"? All anime saved in this custom list will be removed.',
+        confirmText: "Delete List",
+        cancelText: "Cancel",
+        onConfirm: performDelete,
+      });
+    } else {
+      performDelete();
+    }
   },
 
   createNewCustomList: function (title) {
@@ -515,13 +593,34 @@ window.home_details = {
             data: { list_id: newListId, content_id: item.id },
             success: function () {
               home_details.refreshCustomLists();
+              if (typeof window.showToast === "function") {
+                window.showToast(
+                  'Created list "' +
+                    title +
+                    '" and added "' +
+                    (item.title || "Anime") +
+                    '"',
+                  "added"
+                );
+              }
             },
             error: function () {
               home_details.refreshCustomLists();
+              if (typeof window.showToast === "function") {
+                window.showToast('Created custom list "' + title + '"', "added");
+              }
             },
           });
         } else {
           home_details.refreshCustomLists();
+          if (typeof window.showToast === "function") {
+            window.showToast('Created custom list "' + title + '"', "added");
+          }
+        }
+      },
+      error: function () {
+        if (typeof window.showToast === "function") {
+          window.showToast('Failed to create list "' + title + '"', "error");
         }
       },
     });
@@ -612,6 +711,8 @@ window.home_details = {
             break;
           case "watchlist":
             loading.start();
+            var targetAnimeTitle =
+              (home_details.data.this && home_details.data.this.title) || "Anime";
             mylist.toggleStatus(
               home_details.data.this.id,
               !home_details.inWatchList,
@@ -629,10 +730,21 @@ window.home_details = {
                   var wlEl = document.getElementById("watchlist-status");
                   if (wlEl) wlEl.innerHTML = content;
                   loading.end();
+                  if (typeof window.showToast === "function") {
+                    window.showToast(
+                      (home_details.inWatchList ? 'Added "' : 'Removed "') +
+                        targetAnimeTitle +
+                        (home_details.inWatchList ? '" to Watchlist' : '" from Watchlist'),
+                      home_details.inWatchList ? "added" : "removed"
+                    );
+                  }
                 },
                 error: function (error) {
                   console.log(error);
                   loading.end();
+                  if (typeof window.showToast === "function") {
+                    window.showToast("Failed to update Watchlist", "error");
+                  }
                 },
               }
             );

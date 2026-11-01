@@ -75,6 +75,9 @@ window.mylist = {
   },
 
   destroy: function () {
+    if (typeof window.closeConfirmDialog === "function") {
+      window.closeConfirmDialog();
+    }
     mylist.data.lists = [];
     mylist.data.loadedLists = 0;
     mylist.selectedRow = 0;
@@ -285,17 +288,28 @@ window.mylist = {
     var poster_items = ``;
     mylist.data.lists.forEach((element, index) => {
       if (element.items.length > 0) {
-        var rowTitleText =
-          element.title === "lists.watchlist"
-            ? translate.go(element.title)
-            : mylist.escapeHtml(element.title);
+        var isWatchlist =
+          element.title === "lists.watchlist" ||
+          !element.list_id ||
+          element.list_id === "watchlist";
+        var rawListTitle = isWatchlist
+          ? translate.go("lists.watchlist")
+          : String(element.title || "Custom List");
+        var rowTitleText = mylist.escapeHtml(rawListTitle);
         var safeListId = mylist.escapeHtml(element.list_id || "watchlist");
+        var deleteListBtn = !isWatchlist
+          ? `<button type="button" class="mylist-delete-list-btn" data-delete-list-id="${safeListId}" data-delete-list-title="${rowTitleText}" title="Delete Custom List"><i class="fa-solid fa-trash-can"></i><span>Delete List</span></button>`
+          : "";
         poster_items += `
       <div class="row ${index === mylist.selectedRow ? "selected" : ""}" data-list-id="${safeListId}">
-        <div class="row-title">${rowTitleText}</div>
+        <div class="row-title"><span class="row-title-text">${rowTitleText}</span>${deleteListBtn}</div>
         <div class="row-content fixed-error">`;
         element.items.forEach((item) => {
-          poster_items += mylist.createItem(item, element.list_id || "watchlist");
+          poster_items += mylist.createItem(
+            item,
+            element.list_id || "watchlist",
+            rawListTitle
+          );
         });
         for (var index = 0; index < 9; index++) {
           poster_items += mylist.createEmptyItem();
@@ -307,7 +321,7 @@ window.mylist = {
     return poster_items;
   },
 
-  createItem: function (item, listId) {
+  createItem: function (item, listId, listTitle) {
     var remMin =
       item.duration && item.playhead
         ? Math.max(1, Math.round(item.duration - item.playhead))
@@ -327,8 +341,10 @@ window.mylist = {
       : "";
     var safeId = mylist.escapeHtml(item.id || "");
     var safeListId = mylist.escapeHtml(listId || "watchlist");
+    var safeContentTitle = mylist.escapeHtml(item.title || "");
+    var safeListTitle = mylist.escapeHtml(listTitle || "Watchlist");
     var removeBtn = item.id
-      ? `<button type="button" class="mylist-quick-remove" data-content-id="${safeId}" data-list-id="${safeListId}" title="Remove from this list"><i class="fa-solid fa-trash-can"></i></button>`
+      ? `<button type="button" class="mylist-quick-remove" data-content-id="${safeId}" data-list-id="${safeListId}" data-content-title="${safeContentTitle}" data-list-title="${safeListTitle}" title="Remove from this list"><i class="fa-solid fa-trash-can"></i></button>`
       : "";
     return `
     <div class="item">
@@ -342,26 +358,91 @@ window.mylist = {
     </div>`;
   },
 
-  removeItemFromList: function (listId, contentId) {
+  removeItemFromList: function (listId, contentId, contentTitle, listTitle) {
     if (!contentId) return;
     loading.start();
-    var onDone = function () {
+    var isWl = !listId || listId === "watchlist";
+    var itemName = contentTitle || "Anime";
+    var targetName = isWl
+      ? "Watchlist"
+      : '"' + (listTitle || "Custom List") + '"';
+    var onSuccess = function () {
       loading.end();
       mylist.destroy();
       mylist.init();
+      if (typeof window.showToast === "function") {
+        window.showToast(
+          'Removed "' + itemName + '" from ' + targetName,
+          "removed"
+        );
+      }
     };
-    if (!listId || listId === "watchlist") {
+    var onError = function () {
+      loading.end();
+      if (typeof window.showToast === "function") {
+        window.showToast(
+          'Failed to remove "' + itemName + '" from ' + targetName,
+          "error"
+        );
+      }
+    };
+    if (isWl) {
       service.removeWatchlist({
         data: { content_id: contentId },
-        success: onDone,
-        error: onDone,
+        success: onSuccess,
+        error: onError,
       });
     } else {
       service.removeCustomListItem({
         data: { list_id: listId, content_id: contentId },
-        success: onDone,
-        error: onDone,
+        success: onSuccess,
+        error: onError,
       });
+    }
+  },
+
+  deleteCustomList: function (listId, listTitle) {
+    if (!listId || listId === "watchlist") return;
+    var displayTitle = listTitle || "this custom list";
+    var performDelete = function () {
+      loading.start();
+      service.deleteCustomList({
+        data: { list_id: listId },
+        success: function () {
+          loading.end();
+          mylist.destroy();
+          mylist.init();
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              'Deleted custom list "' + displayTitle + '"',
+              "removed"
+            );
+          }
+        },
+        error: function () {
+          loading.end();
+          if (typeof window.showToast === "function") {
+            window.showToast(
+              'Failed to delete "' + displayTitle + '"',
+              "error"
+            );
+          }
+        },
+      });
+    };
+    if (typeof window.showConfirmDialog === "function") {
+      window.showConfirmDialog({
+        title: "Delete Custom List?",
+        message:
+          'Do you really want to delete "' +
+          displayTitle +
+          '"? All anime saved in this custom list will be removed.',
+        confirmText: "Delete List",
+        cancelText: "Cancel",
+        onConfirm: performDelete,
+      });
+    } else {
+      performDelete();
     }
   },
 

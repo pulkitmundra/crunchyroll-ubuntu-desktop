@@ -40,6 +40,153 @@ function setupFloatingToolbar() {
     '<i class="fa-solid fa-arrow-left"></i><span id="screen-back-label">Back</span>';
   document.body.appendChild(screenBackBtn);
 
+  window.showToast = function (message, type) {
+    if (!message || !document.body) return;
+    var container = document.getElementById("cr-toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "cr-toast-container";
+      document.body.appendChild(container);
+    }
+    while (container.children.length >= 3) {
+      container.removeChild(container.firstElementChild);
+    }
+    var variant =
+      type === "removed" || type === "deleted"
+        ? "removed"
+        : type === "error"
+        ? "error"
+        : "added";
+    var toast = document.createElement("div");
+    toast.className = "cr-toast cr-toast-" + variant;
+    var icon = document.createElement("i");
+    icon.className =
+      variant === "removed"
+        ? "fa-solid fa-trash-can"
+        : variant === "error"
+        ? "fa-solid fa-triangle-exclamation"
+        : "fa-solid fa-circle-check";
+    var textSpan = document.createElement("span");
+    textSpan.className = "cr-toast-text";
+    textSpan.textContent = String(message);
+    toast.appendChild(icon);
+    toast.appendChild(textSpan);
+    container.appendChild(toast);
+
+    requestAnimationFrame(function () {
+      toast.classList.add("visible");
+    });
+
+    setTimeout(function () {
+      toast.classList.remove("visible");
+      toast.classList.add("leaving");
+      setTimeout(function () {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 240);
+    }, 2600);
+  };
+
+  window.closeConfirmDialog = function () {
+    var existing = document.getElementById("cr-confirm-modal");
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+    window._crConfirmCallbacks = null;
+  };
+
+  window.showConfirmDialog = function (opts) {
+    if (!opts || !document.body) return;
+    window.closeConfirmDialog();
+
+    var modal = document.createElement("div");
+    modal.id = "cr-confirm-modal";
+    modal.className = "open";
+
+    var card = document.createElement("div");
+    card.className = "cr-confirm-card";
+
+    var header = document.createElement("div");
+    header.className = "cr-confirm-header";
+    var iconEl = document.createElement("i");
+    iconEl.className = "fa-solid fa-triangle-exclamation";
+    var titleEl = document.createElement("span");
+    titleEl.textContent = opts.title || "Confirm Action";
+    header.appendChild(iconEl);
+    header.appendChild(titleEl);
+
+    var bodyEl = document.createElement("div");
+    bodyEl.className = "cr-confirm-body";
+    bodyEl.textContent =
+      opts.message || "Are you sure you want to proceed?";
+
+    var actions = document.createElement("div");
+    actions.className = "cr-confirm-actions";
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.id = "cr-confirm-cancel";
+    cancelBtn.className = "cr-confirm-btn cancel selected";
+    cancelBtn.textContent = opts.cancelText || "Cancel";
+
+    var acceptBtn = document.createElement("button");
+    acceptBtn.type = "button";
+    acceptBtn.id = "cr-confirm-accept";
+    acceptBtn.className = "cr-confirm-btn danger";
+    acceptBtn.textContent = opts.confirmText || "Delete List";
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(acceptBtn);
+
+    card.appendChild(header);
+    card.appendChild(bodyEl);
+    card.appendChild(actions);
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    window._crConfirmCallbacks = {
+      onConfirm: typeof opts.onConfirm === "function" ? opts.onConfirm : null,
+      onCancel: typeof opts.onCancel === "function" ? opts.onCancel : null,
+    };
+
+    cancelBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var cb =
+        window._crConfirmCallbacks && window._crConfirmCallbacks.onCancel;
+      window.closeConfirmDialog();
+      if (cb) cb();
+    });
+
+    acceptBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var cb =
+        window._crConfirmCallbacks && window._crConfirmCallbacks.onConfirm;
+      window.closeConfirmDialog();
+      if (cb) cb();
+    });
+
+    cancelBtn.addEventListener("mouseenter", function () {
+      cancelBtn.classList.add("selected");
+      acceptBtn.classList.remove("selected");
+    });
+
+    acceptBtn.addEventListener("mouseenter", function () {
+      acceptBtn.classList.add("selected");
+      cancelBtn.classList.remove("selected");
+    });
+
+    modal.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!e.target.closest(".cr-confirm-card")) {
+        var cb =
+          window._crConfirmCallbacks && window._crConfirmCallbacks.onCancel;
+        window.closeConfirmDialog();
+        if (cb) cb();
+      }
+    });
+  };
+
   function goHomeFromSubscreen() {
     if (typeof menu !== "undefined" && document.getElementById(menu.id)) {
       var allMenuOptions = $("#menu-screen .option");
@@ -160,6 +307,15 @@ function setupFloatingToolbar() {
   window.updateBackBtnVisibility = updateBackBtnVisibility;
 
   function navigateBack() {
+    if (document.getElementById("cr-confirm-modal")) {
+      var cancelCb =
+        window._crConfirmCallbacks && window._crConfirmCallbacks.onCancel;
+      if (typeof window.closeConfirmDialog === "function") {
+        window.closeConfirmDialog();
+      }
+      if (cancelCb) cancelCb();
+      return;
+    }
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
       main.resolveState();
     }
@@ -238,6 +394,9 @@ function setupFloatingToolbar() {
       !session.storage.access_token
     ) {
       return;
+    }
+    if (typeof window.closeConfirmDialog === "function") {
+      window.closeConfirmDialog();
     }
     if (typeof exit !== "undefined" && document.getElementById(exit.id)) {
       exit.destroy();
@@ -576,6 +735,7 @@ function setupMouseSupport() {
     if (typeof keyboard !== "undefined" && document.getElementById(keyboard.id)) return false;
     if (typeof video !== "undefined" && document.getElementById(video.id)) return false;
     if (document.getElementById("crunchylist-modal")) return false;
+    if (document.getElementById("cr-confirm-modal")) return false;
     if (
       document.body.classList.contains("home_details-screen") ||
       document.body.classList.contains("home_episodes-screen")
@@ -834,6 +994,7 @@ function setupMouseSupport() {
       target.closest("#exit-screen") ||
       target.closest("#changelog-modal") ||
       target.closest("#crunchylist-modal") ||
+      target.closest("#cr-confirm-modal") ||
       target.closest("#player-episodes-slide") ||
       target.closest("#menu-screen") ||
       target.closest("button") ||
@@ -1521,7 +1682,9 @@ function setupMouseSupport() {
     if (
       !target ||
       target.closest("#top-center-dock") ||
-      target.closest("#screen-back-btn")
+      target.closest("#screen-back-btn") ||
+      target.closest("#cr-confirm-modal") ||
+      document.getElementById("cr-confirm-modal")
     ) {
       return;
     }
@@ -1794,8 +1957,9 @@ function setupMouseSupport() {
         if (delListBtn) {
           e.stopPropagation();
           var delId = delListBtn.getAttribute("data-delete-list-id");
+          var delTitle = delListBtn.getAttribute("data-delete-list-title");
           if (delId) {
-            home_details.deleteCustomListById(delId);
+            home_details.deleteCustomListById(delId, delTitle);
           }
           return;
         }
@@ -1954,13 +2118,25 @@ function setupMouseSupport() {
 
     // 14. My List screen (#mylist-screen)
     if (typeof mylist !== "undefined" && main.state === mylist.id) {
+      var delListRowBtn = target.closest("#mylist-screen .mylist-delete-list-btn");
+      if (delListRowBtn) {
+        e.stopPropagation();
+        var delListId = delListRowBtn.getAttribute("data-delete-list-id");
+        var delListTitle = delListRowBtn.getAttribute("data-delete-list-title");
+        if (delListId && typeof mylist.deleteCustomList === "function") {
+          mylist.deleteCustomList(delListId, delListTitle);
+        }
+        return;
+      }
       var quickRemoveBtn = target.closest("#mylist-screen .mylist-quick-remove");
       if (quickRemoveBtn) {
         e.stopPropagation();
         var rmListId = quickRemoveBtn.getAttribute("data-list-id");
         var rmContentId = quickRemoveBtn.getAttribute("data-content-id");
+        var rmContentTitle = quickRemoveBtn.getAttribute("data-content-title");
+        var rmListTitle = quickRemoveBtn.getAttribute("data-list-title");
         if (rmContentId && typeof mylist.removeItemFromList === "function") {
-          mylist.removeItemFromList(rmListId, rmContentId);
+          mylist.removeItemFromList(rmListId, rmContentId, rmContentTitle, rmListTitle);
         }
         return;
       }
@@ -2066,6 +2242,46 @@ window.onunload = function () {
 };
 
 app.keyDown = function (e) {
+  if (document.getElementById("cr-confirm-modal")) {
+    e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+    var cancelBtn = document.getElementById("cr-confirm-cancel");
+    var acceptBtn = document.getElementById("cr-confirm-accept");
+    if (
+      e.keyCode === 27 ||
+      e.keyCode === 8 ||
+      (typeof tvKey !== "undefined" && tvKey.IS_KEY_BACK(e.keyCode))
+    ) {
+      var cCb =
+        window._crConfirmCallbacks && window._crConfirmCallbacks.onCancel;
+      if (typeof window.closeConfirmDialog === "function") {
+        window.closeConfirmDialog();
+      }
+      if (cCb) cCb();
+    } else if (e.keyCode === 37 || e.keyCode === 38) {
+      if (cancelBtn && acceptBtn) {
+        cancelBtn.classList.add("selected");
+        acceptBtn.classList.remove("selected");
+      }
+    } else if (e.keyCode === 39 || e.keyCode === 40) {
+      if (cancelBtn && acceptBtn) {
+        acceptBtn.classList.add("selected");
+        cancelBtn.classList.remove("selected");
+      }
+    } else if (
+      e.keyCode === 13 ||
+      (typeof tvKey !== "undefined" &&
+        (e.keyCode === tvKey.KEY_ENTER || e.keyCode === tvKey.KEY_PANEL_ENTER))
+    ) {
+      if (acceptBtn && acceptBtn.classList.contains("selected")) {
+        acceptBtn.click();
+      } else if (cancelBtn) {
+        cancelBtn.click();
+      }
+    }
+    return;
+  }
+
   if (typeof main !== "undefined" && typeof main.resolveState === "function") {
     main.resolveState();
   }
@@ -2148,6 +2364,7 @@ app.keyDown = function (e) {
       typeof menu !== "undefined" &&
       document.getElementById(menu.id) &&
       !document.getElementById("crunchylist-modal") &&
+      !document.getElementById("cr-confirm-modal") &&
       (main.state === (typeof home !== "undefined" && home.id) ||
         main.state === (typeof browse !== "undefined" && browse.id) ||
         main.state === (typeof mylist !== "undefined" && mylist.id) ||

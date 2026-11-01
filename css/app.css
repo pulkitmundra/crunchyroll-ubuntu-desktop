@@ -476,4 +476,187 @@ body.hide-cursor #screen-back-btn {
   pointer-events: none !important;
 }
 
+/* ================================================================
+   Confirmation Toast Notifications (#cr-toast-container)
+   ================================================================ */
+#cr-toast-container {
+  position: fixed;
+  bottom: 32px;
+  right: 36px;
+  z-index: 9900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.cr-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  max-width: min(460px, 84vw);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: rgba(14, 14, 22, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(244, 117, 33, 0.68);
+  color: #ffffff;
+  font-family: "Lato", sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.82), 0 0 18px rgba(244, 117, 33, 0.16);
+  opacity: 0;
+  transform: translateY(14px) scale(0.97);
+  transition:
+    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cr-toast.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.cr-toast.leaving {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+}
+
+.cr-toast i {
+  font-size: 16px;
+  color: #f47521;
+  flex-shrink: 0;
+}
+
+.cr-toast.cr-toast-removed {
+  border-color: rgba(248, 113, 113, 0.68);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.82), 0 0 18px rgba(239, 68, 68, 0.14);
+}
+
+.cr-toast.cr-toast-removed i {
+  color: #f87171;
+}
+
+.cr-toast.cr-toast-error {
+  border-color: rgba(239, 68, 68, 0.85);
+}
+
+.cr-toast.cr-toast-error i {
+  color: #ef4444;
+}
+
+.cr-toast-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Delete Custom List Confirmation Modal (#cr-confirm-modal)
+   ================================================================ */
+#cr-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9750;
+  background: rgba(6, 6, 10, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+#cr-confirm-modal.open {
+  display: flex;
+}
+
+.cr-confirm-card {
+  width: min(440px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  background: linear-gradient(165deg, rgba(24, 24, 34, 0.98) 0%, rgba(14, 14, 20, 0.99) 100%);
+  border: 1.5px solid rgba(239, 68, 68, 0.55);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), 0 0 28px rgba(239, 68, 68, 0.14);
+  padding: 1.55rem 1.7rem;
+  color: #ffffff;
+  font-family: "Lato", sans-serif;
+}
+
+.cr-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.cr-confirm-header i {
+  color: #f87171;
+  font-size: 1.25rem;
+}
+
+.cr-confirm-body {
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cr-confirm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.cr-confirm-btn {
+  height: 40px;
+  padding: 0 1.2rem;
+  border-radius: 10px;
+  font-family: "Lato", sans-serif;
+  font-size: 0.94rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.9);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cr-confirm-btn.cancel:hover,
+.cr-confirm-btn.cancel.selected {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+.cr-confirm-btn.danger {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.65);
+  color: #ff8a8a;
+}
+
+.cr-confirm-btn.danger:hover,
+.cr-confirm-btn.danger.selected {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.42);
+  transform: translateY(-1px);
+}
+
+
 

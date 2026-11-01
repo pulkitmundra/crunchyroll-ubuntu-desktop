@@ -1,8 +1,13 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.0.0",
+    version: "v2.0.1",
     changes: [
+      {
+        title: "Delete Custom List Confirmation Dialog & Toast Notifications",
+        description:
+          "Added a safety confirmation modal before deleting any Custom List, a Delete List button on My List row headers, empty-name validation on Create & Add, and confirmation toasts across all Watchlist and Custom List actions.",
+      },
       {
         title: "Star Ratings, Sub | Dub Badges & Custom Lists",
         description:
@@ -12,11 +17,6 @@ window.changelog = {
         title: "Skip Credits, Skip Recap & Episode Drawer (E)",
         description:
           "Added Skip Recap and Skip Credits alongside Skip Intro, plus an in-player Season Episode Drawer (press E or click the list icon).",
-      },
-      {
-        title: "Premium Scrubber, Full-Pill Volume Drag & Redesigned Login/About",
-        description:
-          "Upgraded the progress bar with hover timestamp preview, full-pill volume drag, frosted-glass Login screen, and Pulkit Mundra v2.0.0 About section.",
       },
     ],
   },

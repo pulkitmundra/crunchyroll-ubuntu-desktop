@@ -1300,6 +1300,12 @@ body.compact-window .browse-back {
   background: rgba(244, 117, 33, 0.08);
 }
 
+#crunchylist-new-input.input-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28);
+}
+
 #crunchylist-create-btn {
   display: inline-flex;
   align-items: center;
