@@ -47,7 +47,6 @@ slots:
 apps:
   crunchyroll-ubuntu-desktop:
     command: bin/crunchyroll-desktop
-    extensions: [gnome]
     desktop: snap/gui/crunchyroll-ubuntu-desktop.desktop
     slots:
       - mpris
@@ -80,6 +79,7 @@ parts:
       - libgbm1
       - libgtk-3-0
       - libasound2
+      - libpulse0
       - libxss1
       - libxtst6
       - libx11-xcb1
@@ -102,9 +102,9 @@ parts:
       rm -rf "$CRAFT_PART_INSTALL/opt/crunchyroll/resources/app.asar"
       rm -rf "$CRAFT_PART_INSTALL/opt/crunchyroll/resources/app"
 
-      if [ -f "squashfs-root/usr/share/icons/hicolor/256x256/apps/crunchyroll.png" ]; then
+      if [ -f "squashfs-root/usr/share/icons/hicolor/256x256/apps/crunchyroll-linux.png" ]; then
         mkdir -p "$CRAFT_PART_INSTALL/meta/gui"
-        cp "squashfs-root/usr/share/icons/hicolor/256x256/apps/crunchyroll.png" \
+        cp "squashfs-root/usr/share/icons/hicolor/256x256/apps/crunchyroll-linux.png" \
            "$CRAFT_PART_INSTALL/meta/gui/icon.png"
       fi
 
@@ -136,7 +136,8 @@ parts:
       #!/bin/sh
       export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
       export ELECTRON_FORCE_IS_PACKAGED=true
-      exec "$SNAP/opt/crunchyroll/crunchyroll" \
+      export LD_LIBRARY_PATH="$SNAP/opt/crunchyroll/usr/lib:$SNAP/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+      exec "$SNAP/opt/crunchyroll/crunchyroll-linux" \
         --no-sandbox \
         --ozone-platform=x11 \
         "$@"
