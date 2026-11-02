@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Crunchyroll
+Comment=Unofficial Crunchyroll Linux Desktop Client
+Exec=crunchyroll-ubuntu-desktop %U
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/icon.png
+StartupWMClass=crunchyroll
+Categories=AudioVideo;Video;Player;TV;
+Keywords=crunchyroll;anime;streaming;video;
