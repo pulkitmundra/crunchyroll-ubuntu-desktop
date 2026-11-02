@@ -187,6 +187,137 @@ function setupFloatingToolbar() {
     });
   };
 
+  window.closePromptDialog = function () {
+    var existing = document.getElementById("cr-prompt-modal");
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+    window._crPromptCallbacks = null;
+  };
+
+  window.showPromptDialog = function (opts) {
+    if (!opts || !document.body) return;
+    window.closePromptDialog();
+
+    var modal = document.createElement("div");
+    modal.id = "cr-prompt-modal";
+    modal.className = "open";
+
+    var card = document.createElement("div");
+    card.className = "cr-prompt-card";
+
+    var header = document.createElement("div");
+    header.className = "cr-prompt-header";
+    var iconEl = document.createElement("i");
+    iconEl.className = "fa-solid fa-pen-to-square";
+    var titleEl = document.createElement("span");
+    titleEl.textContent = opts.title || "Rename Custom List";
+    header.appendChild(iconEl);
+    header.appendChild(titleEl);
+
+    var inputEl = document.createElement("input");
+    inputEl.type = "text";
+    inputEl.id = "cr-prompt-input";
+    inputEl.className = "cr-prompt-input";
+    inputEl.maxLength = 60;
+    inputEl.placeholder = opts.placeholder || "Enter a name...";
+    inputEl.value = opts.initialValue || "";
+
+    var actions = document.createElement("div");
+    actions.className = "cr-prompt-actions";
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.id = "cr-prompt-cancel";
+    cancelBtn.className = "cr-confirm-btn cancel";
+    cancelBtn.textContent = opts.cancelText || "Cancel";
+
+    var acceptBtn = document.createElement("button");
+    acceptBtn.type = "button";
+    acceptBtn.id = "cr-prompt-accept";
+    acceptBtn.className = "cr-confirm-btn primary selected";
+    acceptBtn.textContent = opts.confirmText || "Save";
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(acceptBtn);
+
+    card.appendChild(header);
+    card.appendChild(inputEl);
+    card.appendChild(actions);
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    window._crPromptCallbacks = {
+      onConfirm: typeof opts.onConfirm === "function" ? opts.onConfirm : null,
+      onCancel: typeof opts.onCancel === "function" ? opts.onCancel : null,
+    };
+
+    var submitPrompt = function () {
+      var val = (inputEl.value || "").trim();
+      if (!val) {
+        inputEl.classList.remove("input-error");
+        void inputEl.offsetWidth;
+        inputEl.classList.add("input-error");
+        inputEl.focus();
+        if (typeof window.showToast === "function") {
+          window.showToast("Please enter a list name", "error");
+        }
+        return;
+      }
+      var cb =
+        window._crPromptCallbacks && window._crPromptCallbacks.onConfirm;
+      window.closePromptDialog();
+      if (cb) cb(val);
+    };
+
+    inputEl.addEventListener("input", function () {
+      inputEl.classList.remove("input-error");
+    });
+
+    inputEl.addEventListener("keydown", function (e) {
+      if (e.keyCode === 13) {
+        e.preventDefault();
+        e.stopPropagation();
+        submitPrompt();
+      } else if (e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        var cb =
+          window._crPromptCallbacks && window._crPromptCallbacks.onCancel;
+        window.closePromptDialog();
+        if (cb) cb();
+      }
+    });
+
+    cancelBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var cb =
+        window._crPromptCallbacks && window._crPromptCallbacks.onCancel;
+      window.closePromptDialog();
+      if (cb) cb();
+    });
+
+    acceptBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      submitPrompt();
+    });
+
+    modal.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!e.target.closest(".cr-prompt-card")) {
+        var cb =
+          window._crPromptCallbacks && window._crPromptCallbacks.onCancel;
+        window.closePromptDialog();
+        if (cb) cb();
+      }
+    });
+
+    setTimeout(function () {
+      inputEl.focus();
+      inputEl.select();
+    }, 30);
+  };
+
   function goHomeFromSubscreen() {
     if (typeof menu !== "undefined" && document.getElementById(menu.id)) {
       var allMenuOptions = $("#menu-screen .option");
@@ -307,6 +438,15 @@ function setupFloatingToolbar() {
   window.updateBackBtnVisibility = updateBackBtnVisibility;
 
   function navigateBack() {
+    if (document.getElementById("cr-prompt-modal")) {
+      var pCancelCb =
+        window._crPromptCallbacks && window._crPromptCallbacks.onCancel;
+      if (typeof window.closePromptDialog === "function") {
+        window.closePromptDialog();
+      }
+      if (pCancelCb) pCancelCb();
+      return;
+    }
     if (document.getElementById("cr-confirm-modal")) {
       var cancelCb =
         window._crConfirmCallbacks && window._crConfirmCallbacks.onCancel;
@@ -394,6 +534,9 @@ function setupFloatingToolbar() {
       !session.storage.access_token
     ) {
       return;
+    }
+    if (typeof window.closePromptDialog === "function") {
+      window.closePromptDialog();
     }
     if (typeof window.closeConfirmDialog === "function") {
       window.closeConfirmDialog();
@@ -736,6 +879,7 @@ function setupMouseSupport() {
     if (typeof video !== "undefined" && document.getElementById(video.id)) return false;
     if (document.getElementById("crunchylist-modal")) return false;
     if (document.getElementById("cr-confirm-modal")) return false;
+    if (document.getElementById("cr-prompt-modal")) return false;
     if (
       document.body.classList.contains("home_details-screen") ||
       document.body.classList.contains("home_episodes-screen")
@@ -995,6 +1139,7 @@ function setupMouseSupport() {
       target.closest("#changelog-modal") ||
       target.closest("#crunchylist-modal") ||
       target.closest("#cr-confirm-modal") ||
+      target.closest("#cr-prompt-modal") ||
       target.closest("#player-episodes-slide") ||
       target.closest("#menu-screen") ||
       target.closest("button") ||
@@ -1684,7 +1829,9 @@ function setupMouseSupport() {
       target.closest("#top-center-dock") ||
       target.closest("#screen-back-btn") ||
       target.closest("#cr-confirm-modal") ||
-      document.getElementById("cr-confirm-modal")
+      target.closest("#cr-prompt-modal") ||
+      document.getElementById("cr-confirm-modal") ||
+      document.getElementById("cr-prompt-modal")
     ) {
       return;
     }
@@ -1785,6 +1932,22 @@ function setupMouseSupport() {
       }
 
       if (video.episodesDrawer && video.episodesDrawer.open) {
+        var prevSeasonBtn = target.closest("#player-season-prev");
+        if (prevSeasonBtn) {
+          e.stopPropagation();
+          if (!prevSeasonBtn.disabled && typeof video.switchDrawerSeason === "function") {
+            video.switchDrawerSeason(-1);
+          }
+          return;
+        }
+        var nextSeasonBtn = target.closest("#player-season-next");
+        if (nextSeasonBtn) {
+          e.stopPropagation();
+          if (!nextSeasonBtn.disabled && typeof video.switchDrawerSeason === "function") {
+            video.switchDrawerSeason(1);
+          }
+          return;
+        }
         var epClose = target.closest("#player-episodes-close");
         if (epClose) {
           video.closeEpisodes(true);
@@ -1910,6 +2073,21 @@ function setupMouseSupport() {
 
     // 6. Seasons & Episodes screen (.home_episodes-screen_content)
     if (typeof home_episodes !== "undefined" && main.state === home_episodes.id) {
+      var watchedToggleBtn = target.closest(
+        ".home_episodes-screen_content .episode-watched-toggle"
+      );
+      if (watchedToggleBtn) {
+        e.stopPropagation();
+        var wEpIdx = parseInt(watchedToggleBtn.getAttribute("data-ep-index"), 10);
+        if (
+          !isNaN(wEpIdx) &&
+          typeof home_episodes.toggleEpisodeWatched === "function"
+        ) {
+          home_episodes.toggleEpisodeWatched(wEpIdx, watchedToggleBtn);
+        }
+        return;
+      }
+
       var seasonEl = target.closest(".home_episodes-screen_content .seasons-list .season");
       if (seasonEl) {
         var panels = $(".home_episodes-screen_content .option");
@@ -1953,6 +2131,16 @@ function setupMouseSupport() {
     // 7. Anime Details screen (.home_details-screen_buttons a & #crunchylist-modal)
     if (typeof home_details !== "undefined" && main.state === home_details.id) {
       if (home_details.listModalOpen) {
+        var renListBtn = target.closest("#crunchylist-modal .crunchylist-rename-btn");
+        if (renListBtn) {
+          e.stopPropagation();
+          var renId = renListBtn.getAttribute("data-rename-list-id");
+          var renTitle = renListBtn.getAttribute("data-rename-list-title");
+          if (renId && typeof home_details.renameCustomListById === "function") {
+            home_details.renameCustomListById(renId, renTitle);
+          }
+          return;
+        }
         var delListBtn = target.closest("#crunchylist-modal .crunchylist-delete-btn");
         if (delListBtn) {
           e.stopPropagation();
@@ -2080,6 +2268,37 @@ function setupMouseSupport() {
 
     // 12. Search screen (#search-screen)
     if (typeof search !== "undefined" && main.state === search.id) {
+      var chipRemoveBtn = target.closest("#search-screen .recent-chip-remove");
+      if (chipRemoveBtn) {
+        e.stopPropagation();
+        var rmQuery = chipRemoveBtn.getAttribute("data-remove-query");
+        if (rmQuery && typeof search.removeRecentSearch === "function") {
+          search.removeRecentSearch(rmQuery);
+        }
+        return;
+      }
+
+      var clearRecentBtn = target.closest("#search-screen #search-recent-clear");
+      if (clearRecentBtn) {
+        e.stopPropagation();
+        if (typeof search.clearRecentSearches === "function") {
+          search.clearRecentSearches();
+        }
+        return;
+      }
+
+      var recentChip = target.closest("#search-screen .recent-search-chip");
+      if (recentChip) {
+        e.stopPropagation();
+        var chipQuery = recentChip.getAttribute("data-query");
+        if (chipQuery && search.input) {
+          search.input.value = chipQuery;
+          search.toggleFocus(-1);
+          search.start();
+        }
+        return;
+      }
+
       var searchInputBox = target.closest("#search-screen_input");
       if (searchInputBox) {
         search.toggleFocus(-1);
@@ -2103,6 +2322,24 @@ function setupMouseSupport() {
 
     // 13. History screen (#history-screen)
     if (typeof historyScreen !== "undefined" && main.state === historyScreen.id) {
+      var clearHistoryBtn = target.closest("#history-screen #history-clear-all-btn");
+      if (clearHistoryBtn) {
+        e.stopPropagation();
+        if (typeof historyScreen.clearAllHistory === "function") {
+          historyScreen.clearAllHistory();
+        }
+        return;
+      }
+      var histQuickRemove = target.closest("#history-screen .history-quick-remove");
+      if (histQuickRemove) {
+        e.stopPropagation();
+        var hContentId = histQuickRemove.getAttribute("data-content-id");
+        var hLabel = histQuickRemove.getAttribute("data-history-label");
+        if (hContentId && typeof historyScreen.removeHistoryItem === "function") {
+          historyScreen.removeHistoryItem(hContentId, hLabel);
+        }
+        return;
+      }
       var historyItem = target.closest("#history-screen .list-container-over .item");
       if (historyItem) {
         var allHist = $("#history-screen .list-container-over .item");
@@ -2118,6 +2355,16 @@ function setupMouseSupport() {
 
     // 14. My List screen (#mylist-screen)
     if (typeof mylist !== "undefined" && main.state === mylist.id) {
+      var renListRowBtn = target.closest("#mylist-screen .mylist-rename-list-btn");
+      if (renListRowBtn) {
+        e.stopPropagation();
+        var renListId = renListRowBtn.getAttribute("data-rename-list-id");
+        var renListTitle = renListRowBtn.getAttribute("data-rename-list-title");
+        if (renListId && typeof mylist.renameCustomList === "function") {
+          mylist.renameCustomList(renListId, renListTitle);
+        }
+        return;
+      }
       var delListRowBtn = target.closest("#mylist-screen .mylist-delete-list-btn");
       if (delListRowBtn) {
         e.stopPropagation();
@@ -2224,6 +2471,9 @@ function setupMouseSupport() {
 window.onload = function () {
   setupFloatingToolbar();
   setupMouseSupport();
+  if (typeof player !== "undefined" && typeof player.applySubtitlePrefs === "function") {
+    player.applySubtitlePrefs();
+  }
   if (typeof main != "undefined") {
     app.state = true;
     main.init();
@@ -2242,6 +2492,31 @@ window.onunload = function () {
 };
 
 app.keyDown = function (e) {
+  if (document.getElementById("cr-prompt-modal")) {
+    if (
+      e.keyCode === 27 ||
+      (typeof tvKey !== "undefined" && tvKey.IS_KEY_BACK(e.keyCode))
+    ) {
+      e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      var pCancel =
+        window._crPromptCallbacks && window._crPromptCallbacks.onCancel;
+      if (typeof window.closePromptDialog === "function") {
+        window.closePromptDialog();
+      }
+      if (pCancel) pCancel();
+      return;
+    }
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      var pAcceptBtn = document.getElementById("cr-prompt-accept");
+      if (pAcceptBtn) pAcceptBtn.click();
+      return;
+    }
+    return;
+  }
+
   if (document.getElementById("cr-confirm-modal")) {
     e.preventDefault();
     if (e.stopPropagation) e.stopPropagation();
@@ -2335,6 +2610,21 @@ app.keyDown = function (e) {
     return;
   }
 
+  // Ctrl+Shift+S captures a clean video frame screenshot on the video player screen
+  if (
+    (e.ctrlKey || e.metaKey) &&
+    e.shiftKey &&
+    (e.keyCode === 83 || e.key === "S" || e.key === "s") &&
+    typeof video !== "undefined" &&
+    main.state === video.id
+  ) {
+    e.preventDefault();
+    if (typeof video.captureFrame === "function") {
+      video.captureFrame();
+    }
+    return;
+  }
+
   // Backspace or Alt+Left goes back one screen when not typing in an input
   if (e.keyCode === 8 || (e.altKey && e.keyCode === 37)) {
     e.preventDefault();
@@ -2365,6 +2655,7 @@ app.keyDown = function (e) {
       document.getElementById(menu.id) &&
       !document.getElementById("crunchylist-modal") &&
       !document.getElementById("cr-confirm-modal") &&
+      !document.getElementById("cr-prompt-modal") &&
       (main.state === (typeof home !== "undefined" && home.id) ||
         main.state === (typeof browse !== "undefined" && browse.id) ||
         main.state === (typeof mylist !== "undefined" && mylist.id) ||
@@ -2421,3 +2712,4 @@ app.keyDown = function (e) {
     }
   }
 };
+

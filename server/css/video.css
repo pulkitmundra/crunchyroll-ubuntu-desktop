@@ -1133,13 +1133,54 @@ body.compact-window #video-screen.next-ep-visible #skip-intro {
   text-overflow: ellipsis;
 }
 
+#video-screen .episodes-slide .episodes-slide-season-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
 #video-screen .episodes-slide .episodes-slide-season {
   color: #f47521;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#video-screen .episodes-slide .player-season-nav-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    opacity 0.14s ease;
+}
+
+#video-screen .episodes-slide .player-season-nav-btn:hover:not(:disabled) {
+  background: rgba(244, 117, 33, 0.22);
+  border-color: #f47521;
+  color: #fff;
+}
+
+#video-screen .episodes-slide .player-season-nav-btn:disabled {
+  opacity: 0.28;
+  cursor: default;
+  pointer-events: none;
 }
 
 #video-screen .episodes-slide #player-episodes-close {
@@ -1304,4 +1345,55 @@ body.compact-window #video-screen.next-ep-visible #skip-intro {
   font-weight: 700;
   text-transform: uppercase;
 }
+
+/* Clean HUD-free screenshot capture state */
+body.capturing-screenshot #video-screen .osd,
+body.capturing-screenshot #video-screen #osd-icon,
+body.capturing-screenshot #video-screen #skip-intro,
+body.capturing-screenshot #video-screen .next-episode,
+body.capturing-screenshot #video-screen .settings-slide,
+body.capturing-screenshot #video-screen .episodes-slide,
+body.capturing-screenshot #top-center-dock,
+body.capturing-screenshot #screen-back-btn,
+body.capturing-screenshot #cr-toast-container {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+/* Subtitle appearance customization for WebVTT / native text tracks */
+body[data-sub-size="small"] #videoplayer::cue {
+  font-size: 85%;
+}
+
+body[data-sub-size="default"] #videoplayer::cue {
+  font-size: 100%;
+}
+
+body[data-sub-size="large"] #videoplayer::cue {
+  font-size: 125%;
+}
+
+body[data-sub-size="xlarge"] #videoplayer::cue {
+  font-size: 150%;
+}
+
+body[data-sub-bg="shadow"] #videoplayer::cue {
+  background-color: transparent;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.95),
+    0 0 3px rgba(0, 0, 0, 0.95);
+}
+
+body[data-sub-bg="pill"] #videoplayer::cue {
+  background-color: rgba(10, 10, 14, 0.65);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+body[data-sub-bg="box"] #videoplayer::cue {
+  background-color: rgba(0, 0, 0, 0.92);
+  text-shadow: none;
+}
+
 

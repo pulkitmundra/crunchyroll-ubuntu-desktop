@@ -95,19 +95,34 @@ window.home_episodes = {
           }
 
           var episodes_html = "";
-          home_episodes.data.episodes.forEach((episode) => {
+          home_episodes.data.episodes.forEach((episode, epIndex) => {
             var subDubBadge = episode.subDub
               ? `<span class="ep-subdub-badge">${esc(episode.subDub)}</span>`
               : "";
+            var isWatched = Boolean(
+              episode.duration && episode.playhead >= episode.duration
+            );
+            var watchedBtn = `<button type="button" class="episode-watched-toggle${
+              isWatched ? " watched" : ""
+            }" data-ep-index="${epIndex}" title="${
+              isWatched ? "Mark as Unwatched" : "Mark as Watched"
+            }"><i class="fa-${
+              isWatched ? "solid" : "regular"
+            } fa-circle-check"></i><span>${
+              isWatched ? "Watched" : "Mark Watched"
+            }</span></button>`;
             episodes_html += `
-            <div class="episode">
+            <div class="episode" data-ep-index="${epIndex}">
               <div class="episode-image">
                 <img src="${esc(episode.background)}">
                 ${home_episodes.view(episode)}
                 ${home_episodes.premium(episode)}
               </div>
               <div class="episode-details">
-                <div class="episode-title">${esc(episode.episode_number)}. ${esc(episode.title)} ${subDubBadge}</div>
+                <div class="episode-title-row">
+                  <div class="episode-title">${esc(episode.episode_number)}. ${esc(episode.title)} ${subDubBadge}</div>
+                  ${watchedBtn}
+                </div>
                 <div class="episode-description">${esc(episode.description)}</div>
               </div>
             </div>`;
@@ -146,6 +161,74 @@ window.home_episodes = {
     });
   },
 
+  toggleEpisodeWatched: function (epIndex, btnEl) {
+    if (
+      !home_episodes.data ||
+      !Array.isArray(home_episodes.data.episodes) ||
+      !home_episodes.data.episodes[epIndex]
+    ) {
+      return;
+    }
+    var ep = home_episodes.data.episodes[epIndex];
+    var durMin = ep.duration && ep.duration > 0 ? ep.duration : 24;
+    var currentlyWatched = Boolean(ep.playhead && ep.playhead >= durMin);
+    var nowWatched = !currentlyWatched;
+    var targetPlayheadSec = nowWatched ? Math.round(durMin * 60) : 0;
+
+    service.setHistory({
+      data: {
+        content_id: ep.id,
+        playhead: targetPlayheadSec,
+      },
+      success: function () {
+        ep.playhead = nowWatched ? durMin : 0;
+        var cardEl =
+          (btnEl && btnEl.closest && btnEl.closest(".episode")) ||
+          document.querySelector(`.episodes-list .episode[data-ep-index="${epIndex}"]`);
+        if (cardEl) {
+          var imgWrap = cardEl.querySelector(".episode-image");
+          if (imgWrap) {
+            var oldProg = imgWrap.querySelector(".progress");
+            if (oldProg && oldProg.parentNode) {
+              oldProg.parentNode.removeChild(oldProg);
+            }
+            var newProgHtml = home_episodes.view(ep);
+            if (newProgHtml) {
+              imgWrap.insertAdjacentHTML("beforeend", newProgHtml);
+            }
+          }
+          var toggleBtn = cardEl.querySelector(".episode-watched-toggle");
+          if (toggleBtn) {
+            toggleBtn.classList.toggle("watched", nowWatched);
+            toggleBtn.title = nowWatched ? "Mark as Unwatched" : "Mark as Watched";
+            toggleBtn.innerHTML = `<i class="fa-${
+              nowWatched ? "solid" : "regular"
+            } fa-circle-check"></i><span>${
+              nowWatched ? "Watched" : "Mark Watched"
+            }</span>`;
+          }
+        }
+        if (typeof window.showToast === "function") {
+          var epLabel =
+            (ep.episode_number ? "E" + ep.episode_number + " - " : "") +
+            (ep.title || "Episode");
+          window.showToast(
+            'Marked "' +
+              epLabel +
+              '" as ' +
+              (nowWatched ? "Watched" : "Unwatched"),
+            nowWatched ? "added" : "removed"
+          );
+        }
+      },
+      error: function () {
+        if (typeof window.showToast === "function") {
+          window.showToast("Failed to update episode watch status", "error");
+        }
+      },
+    });
+  },
+
   view: function (episode) {
     if (!episode.playhead || !episode.duration) return "";
     var pct = Math.min(100, Math.max(0, (episode.playhead * 100) / episode.duration));
@@ -176,6 +259,9 @@ window.home_episodes = {
       document.body.classList.contains(home_details.id)
     ) {
       $(`#${home.id} .content > .details`).addClass("full");
+      if (typeof home_details.refreshContinue === "function") {
+        home_details.refreshContinue(false);
+      }
     }
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
       main.state = main.resolveState() || home_episodes.previous;

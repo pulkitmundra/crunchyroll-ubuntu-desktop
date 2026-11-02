@@ -43,6 +43,11 @@ window.video = {
       action: "toggleAspectRatio",
       label: "Aspect Ratio (Z)",
     },
+    {
+      icon: "fa-solid fa-camera",
+      action: "captureFrame",
+      label: "Capture Frame (Ctrl+Shift+S)",
+    },
   ],
   aspects: ["expand", "compress", "crop-simple"],
   aspect: 0,
@@ -63,6 +68,9 @@ window.video = {
     open: false,
     list: [],
     seasonId: null,
+    seasons: [],
+    seasonIndex: -1,
+    seriesId: null,
   },
   streams: [],
   timers: {
@@ -88,6 +96,179 @@ window.video = {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  },
+
+  captureFrame: function () {
+    if (
+      !window.electronUtilsRender ||
+      typeof window.electronUtilsRender.captureScreenshot !== "function"
+    ) {
+      if (typeof window.showToast === "function") {
+        window.showToast("Screenshot capture is unavailable", "error");
+      }
+      return false;
+    }
+    var item = video.currentItem || {};
+    var serieName = item.serie || item.title || "Crunchyroll";
+    var epCode =
+      item.season_number !== undefined && item.episode_number !== undefined
+        ? "S" + item.season_number + "E" + item.episode_number
+        : item.episode_number !== undefined
+        ? "E" + item.episode_number
+        : "";
+    var label = (serieName + (epCode ? "_" + epCode : "")).trim();
+
+    document.body.classList.add("capturing-screenshot");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        window.electronUtilsRender
+          .captureScreenshot({ label: label })
+          .then(function (res) {
+            document.body.classList.remove("capturing-screenshot");
+            if (res && res.ok) {
+              if (typeof window.showToast === "function") {
+                window.showToast(
+                  "Saved frame to " +
+                    (res.displayPath || "~/Pictures/Crunchyroll") +
+                    " (& copied to clipboard)",
+                  "added"
+                );
+              }
+            } else if (typeof window.showToast === "function") {
+              window.showToast("Unable to capture video frame", "error");
+            }
+          })
+          .catch(function () {
+            document.body.classList.remove("capturing-screenshot");
+            if (typeof window.showToast === "function") {
+              window.showToast("Unable to capture video frame", "error");
+            }
+          });
+      });
+    });
+    return false;
+  },
+
+  updateMediaSession: function () {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+      return;
+    }
+    try {
+      var item = video.currentItem || {};
+      var epTitle =
+        item.episode ||
+        item.title ||
+        (item.episode_number ? "Episode " + item.episode_number : "Playing");
+      var serieTitle = item.serie || item.title || "Crunchyroll";
+      var seasonAlbum =
+        item.season_number !== undefined
+          ? "Season " +
+            item.season_number +
+            (item.episode_number !== undefined
+              ? " - Ep " + item.episode_number
+              : "")
+          : "Crunchyroll";
+      var artwork = [];
+      if (item.background) {
+        artwork.push({
+          src: item.background,
+          sizes: "512x512",
+          type: "image/jpeg",
+        });
+      }
+      if (typeof MediaMetadata !== "undefined") {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: epTitle,
+          artist: serieTitle,
+          album: seasonAlbum,
+          artwork: artwork,
+        });
+      }
+      var safeSetHandler = function (action, fn) {
+        try {
+          navigator.mediaSession.setActionHandler(action, fn);
+        } catch (e) {}
+      };
+      safeSetHandler("play", function () {
+        if (typeof player !== "undefined") player.resume();
+      });
+      safeSetHandler("pause", function () {
+        if (typeof player !== "undefined") player.pause();
+      });
+      safeSetHandler("seekbackward", function (details) {
+        var offset = (details && details.seekOffset) || 10;
+        if (typeof player !== "undefined") {
+          player.seekBy(-offset, video.setPlayingTime);
+        }
+      });
+      safeSetHandler("seekforward", function (details) {
+        var offset = (details && details.seekOffset) || 10;
+        if (typeof player !== "undefined") {
+          player.seekBy(offset, video.setPlayingTime);
+        }
+      });
+      safeSetHandler("seekto", function (details) {
+        if (
+          details &&
+          typeof details.seekTime === "number" &&
+          typeof player !== "undefined"
+        ) {
+          player.forwardTo(details.seekTime);
+          video.setPlayingTime();
+        }
+      });
+      safeSetHandler("nexttrack", function () {
+        video.nextEpisode(true);
+      });
+      safeSetHandler("previoustrack", function () {
+        if (typeof player !== "undefined" && player.getPlayed() > 10) {
+          player.forwardTo(0);
+          video.setPlayingTime();
+        }
+      });
+      video.syncMediaSessionPosition();
+    } catch (e) {}
+  },
+
+  syncMediaSessionPosition: function () {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+      return;
+    }
+    try {
+      if (
+        typeof player !== "undefined" &&
+        player.video &&
+        typeof navigator.mediaSession.setPositionState === "function"
+      ) {
+        var dur = player.getDuration();
+        var pos = player.getPlayed();
+        var rate =
+          (player.video && player.video.playbackRate) ||
+          (video.speed && video.speed.active) ||
+          1;
+        if (dur && isFinite(dur) && dur > 0) {
+          navigator.mediaSession.setPositionState({
+            duration: dur,
+            playbackRate: rate > 0 ? rate : 1,
+            position: Math.max(0, Math.min(dur, pos || 0)),
+          });
+        }
+      }
+      if (typeof player !== "undefined") {
+        navigator.mediaSession.playbackState =
+          player.state === player.states.PLAYING ? "playing" : "paused";
+      }
+    } catch (e) {}
+  },
+
+  clearMediaSession: function () {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+      return;
+    }
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+    } catch (e) {}
   },
 
   toggleAspectRatio: function () {
@@ -145,6 +326,180 @@ window.video = {
     return false;
   },
 
+  updateDrawerSeasonNav: function () {
+    var seasons = (video.episodesDrawer && video.episodesDrawer.seasons) || [];
+    var idx =
+      video.episodesDrawer && typeof video.episodesDrawer.seasonIndex === "number"
+        ? video.episodesDrawer.seasonIndex
+        : -1;
+    var prevBtn = document.getElementById("player-season-prev");
+    var nextBtn = document.getElementById("player-season-next");
+    var seasonEl = document.getElementById("player-episodes-season");
+    if (idx >= 0 && seasons[idx] && seasonEl) {
+      var s = seasons[idx];
+      var sText = "Season " + (s.number !== undefined ? s.number : idx + 1);
+      if (
+        s.title &&
+        s.title.toLowerCase().indexOf("season " + s.number) === -1 &&
+        s.title !== (video.currentItem && video.currentItem.serie)
+      ) {
+        sText += " - " + s.title;
+      }
+      seasonEl.textContent = sText;
+    }
+    if (prevBtn) {
+      prevBtn.disabled = !(seasons.length > 1 && idx > 0);
+    }
+    if (nextBtn) {
+      nextBtn.disabled = !(seasons.length > 1 && idx >= 0 && idx < seasons.length - 1);
+    }
+  },
+
+  ensureDrawerSeasons: function () {
+    var item = video.currentItem || {};
+    if (
+      video.episodesDrawer.seasons &&
+      video.episodesDrawer.seasons.length > 0
+    ) {
+      if (video.episodesDrawer.seasonIndex < 0) {
+        var foundIdx = video.episodesDrawer.seasons.findIndex(function (s) {
+          return (
+            (video.episodesDrawer.seasonId &&
+              s.id === video.episodesDrawer.seasonId) ||
+            (item.season_id && s.id === item.season_id) ||
+            (item.season_number !== undefined &&
+              String(s.number) === String(item.season_number))
+          );
+        });
+        video.episodesDrawer.seasonIndex = foundIdx >= 0 ? foundIdx : 0;
+      }
+      video.updateDrawerSeasonNav();
+      return;
+    }
+
+    if (
+      typeof home_episodes !== "undefined" &&
+      home_episodes.data &&
+      Array.isArray(home_episodes.data.seasons) &&
+      home_episodes.data.seasons.length > 0
+    ) {
+      var matchHomeSeason = home_episodes.data.seasons.findIndex(function (s) {
+        return (
+          (item.season_id && s.id === item.season_id) ||
+          (item.season_number !== undefined &&
+            String(s.number) === String(item.season_number))
+        );
+      });
+      if (matchHomeSeason >= 0) {
+        video.episodesDrawer.seasons = home_episodes.data.seasons.slice();
+        video.episodesDrawer.seasonIndex = matchHomeSeason;
+        video.updateDrawerSeasonNav();
+        return;
+      }
+    }
+
+    var fetchForSeries = function (seriesId) {
+      if (!seriesId) return;
+      video.episodesDrawer.seriesId = seriesId;
+      service.seasons({
+        data: { id: seriesId },
+        success: function (sResp) {
+          var seasons =
+            (typeof mapper !== "undefined" && mapper.seasons(sResp)) || [];
+          if (!seasons.length) return;
+          video.episodesDrawer.seasons = seasons;
+          var sIdx = seasons.findIndex(function (s) {
+            return (
+              (video.episodesDrawer.seasonId &&
+                s.id === video.episodesDrawer.seasonId) ||
+              (item.season_id && s.id === item.season_id) ||
+              (item.season_number !== undefined &&
+                String(s.number) === String(item.season_number))
+            );
+          });
+          video.episodesDrawer.seasonIndex = sIdx >= 0 ? sIdx : 0;
+          video.updateDrawerSeasonNav();
+        },
+        error: function () {},
+      });
+    };
+
+    var fallbackSeriesId =
+      item.series_id ||
+      video.episodesDrawer.seriesId ||
+      (typeof home_details !== "undefined" &&
+        home_details.data &&
+        home_details.data.this &&
+        home_details.data.this.id) ||
+      null;
+
+    if (fallbackSeriesId) {
+      fetchForSeries(fallbackSeriesId);
+    } else if (video.episode) {
+      service.seriesInfo({
+        data: { id: video.episode },
+        success: function (resp) {
+          var doc = resp && resp.data && resp.data[0];
+          var meta = (doc && doc.episode_metadata) || {};
+          if (meta.series_id) {
+            if (video.currentItem) {
+              video.currentItem.series_id = meta.series_id;
+            }
+            fetchForSeries(meta.series_id);
+          }
+        },
+        error: function () {},
+      });
+    }
+  },
+
+  switchDrawerSeason: function (delta) {
+    var seasons = (video.episodesDrawer && video.episodesDrawer.seasons) || [];
+    if (seasons.length <= 1) return;
+    var curIdx =
+      typeof video.episodesDrawer.seasonIndex === "number" &&
+      video.episodesDrawer.seasonIndex >= 0
+        ? video.episodesDrawer.seasonIndex
+        : 0;
+    var nextIdx = curIdx + delta;
+    if (nextIdx < 0 || nextIdx >= seasons.length) return;
+    var targetSeason = seasons[nextIdx];
+    if (!targetSeason || !targetSeason.id) return;
+
+    video.episodesDrawer.seasonIndex = nextIdx;
+    video.episodesDrawer.seasonId = targetSeason.id;
+    video.updateDrawerSeasonNav();
+
+    var listEl = document.getElementById("player-episodes-list");
+    if (listEl) {
+      listEl.innerHTML =
+        '<li class="player-ep-loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading Season ' +
+        video.escapeHtml(targetSeason.number || nextIdx + 1) +
+        "...</li>";
+    }
+
+    service.episodes({
+      data: { id: targetSeason.id },
+      success: function (resp) {
+        if (!resp || !Array.isArray(resp.items) || resp.items.length === 0) {
+          video.episodesDrawer.list = [];
+          video.renderEpisodesDrawer();
+          return;
+        }
+        mapper.episodes(resp, function (mappedList) {
+          video.episodesDrawer.list = mappedList || [];
+          video.renderEpisodesDrawer();
+        });
+      },
+      error: function () {
+        if (listEl) {
+          listEl.innerHTML =
+            '<li class="player-ep-loading">Unable to load episode list.</li>';
+        }
+      },
+    });
+  },
+
   openEpisodes: function () {
     if (video.isAutoSkipping()) {
       video.abortAutoSkip();
@@ -166,6 +521,7 @@ window.video = {
     $("#player-episodes-season").text(
       item.season_number ? "Season " + item.season_number : "Current Season"
     );
+    video.ensureDrawerSeasons();
 
     if (
       video.episodesDrawer.list &&
@@ -214,6 +570,7 @@ window.video = {
     var loadBySeasonId = function (seasonId) {
       if (!seasonId) return;
       video.episodesDrawer.seasonId = seasonId;
+      video.updateDrawerSeasonNav();
       service.episodes({
         data: { id: seasonId },
         success: function (resp) {
@@ -244,6 +601,7 @@ window.video = {
         }
         return;
       }
+      video.episodesDrawer.seriesId = seriesId;
       service.seasons({
         data: { id: seriesId },
         success: function (sResp) {
@@ -255,13 +613,16 @@ window.video = {
             }
             return;
           }
-          var targetSeason =
-            seasons.find(function (s) {
-              return (
-                item.season_number &&
-                String(s.number) === String(item.season_number)
-              );
-            }) || seasons[0];
+          video.episodesDrawer.seasons = seasons;
+          var targetIdx = seasons.findIndex(function (s) {
+            return (
+              item.season_number &&
+              String(s.number) === String(item.season_number)
+            );
+          });
+          if (targetIdx < 0) targetIdx = 0;
+          video.episodesDrawer.seasonIndex = targetIdx;
+          var targetSeason = seasons[targetIdx];
           if (video.currentItem) {
             video.currentItem.season_id = targetSeason.id;
           }
@@ -301,6 +662,7 @@ window.video = {
               meta.series_id || video.currentItem.series_id || fallbackSeriesId;
           }
           loadBySeasonId(meta.season_id);
+          video.ensureDrawerSeasons();
         } else {
           loadBySeriesId(meta.series_id || fallbackSeriesId);
         }
@@ -434,6 +796,10 @@ window.video = {
     video.settings.open = false;
     video.episodesDrawer.open = false;
     video.episodesDrawer.list = [];
+    video.episodesDrawer.seasonId = null;
+    video.episodesDrawer.seasons = [];
+    video.episodesDrawer.seasonIndex = -1;
+    video.episodesDrawer.seriesId = null;
     video.speed.state = false;
     video.option = false;
     video.currentItem = Object.assign({}, item);
@@ -525,7 +891,15 @@ window.video = {
         <div class="episodes-slide-header">
           <div class="episodes-slide-titles">
             <div class="episodes-slide-serie" id="player-episodes-serie">${safeSerieDrawer}</div>
-            <div class="episodes-slide-season" id="player-episodes-season">Season ${safeSeasonDrawer}</div>
+            <div class="episodes-slide-season-row">
+              <button type="button" id="player-season-prev" class="player-season-nav-btn" title="Previous Season" disabled>
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="episodes-slide-season" id="player-episodes-season">Season ${safeSeasonDrawer}</div>
+              <button type="button" id="player-season-next" class="player-season-nav-btn" title="Next Season" disabled>
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
           </div>
           <button type="button" id="player-episodes-close" title="Close (Esc / E)">
             <i class="fa-solid fa-xmark"></i>
@@ -535,6 +909,9 @@ window.video = {
       </div>
     </div>`;
     document.body.appendChild(video_element);
+    if (typeof player !== "undefined" && typeof player.applySubtitlePrefs === "function") {
+      player.applySubtitlePrefs();
+    }
     video.syncVolumeUI();
 
     $(`#${home.id}`).hide();
@@ -545,8 +922,13 @@ window.video = {
   },
 
   destroy: function () {
-    document.body.classList.remove("scrubbing-progress", "scrubbing-volume");
+    document.body.classList.remove(
+      "scrubbing-progress",
+      "scrubbing-volume",
+      "capturing-screenshot"
+    );
     video.clearAutoSkip(true);
+    video.clearMediaSession();
     video.hideOSD();
     document.body.classList.remove("hide-cursor");
     if (video.episode && typeof player !== "undefined" && player.getPlayed() > 0) {
@@ -569,6 +951,10 @@ window.video = {
     video.credits = null;
     video.episodesDrawer.open = false;
     video.episodesDrawer.list = [];
+    video.episodesDrawer.seasonId = null;
+    video.episodesDrawer.seasons = [];
+    video.episodesDrawer.seasonIndex = -1;
+    video.episodesDrawer.seriesId = null;
     video.data = null;
     video.streams = [];
     video.speed.state = false;
@@ -730,7 +1116,10 @@ window.video = {
         break;
       case tvKey.KEY_PREVIOUS:
       case tvKey.KEY_LEFT:
-        if (video.option) {
+        if (video.episodesDrawer && video.episodesDrawer.open) {
+          osd = false;
+          video.switchDrawerSeason(-1);
+        } else if (video.option) {
           if (video.speed.state) {
             osd = false;
             video.setSpeed(-1);
@@ -749,7 +1138,10 @@ window.video = {
         break;
       case tvKey.KEY_RIGHT:
       case tvKey.KEY_NEXT:
-        if (video.option) {
+        if (video.episodesDrawer && video.episodesDrawer.open) {
+          osd = false;
+          video.switchDrawerSeason(1);
+        } else if (video.option) {
           if (video.speed.state) {
             osd = false;
             video.setSpeed(1);
@@ -914,6 +1306,7 @@ window.video = {
 
   play: function (item, noplay, forceSubtitle) {
     video.episode = item.id;
+    video.updateMediaSession();
     service.video_v2({
       data: {
         id: item.id,
@@ -970,6 +1363,7 @@ window.video = {
           video.startHistory();
           video.setAudios();
           video.setSubtitles();
+          video.updateMediaSession();
         } catch (error) {
           console.log(error);
         }

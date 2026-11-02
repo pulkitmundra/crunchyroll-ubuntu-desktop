@@ -412,6 +412,7 @@ window.mapper = {
         var epMeta = element.panel.episode_metadata || {};
         return {
           id: epMeta.series_id,
+          content_id: element.id || (element.panel && element.panel.id) || "",
           series_id: epMeta.series_id,
           season_id: epMeta.season_id || "",
           season_number: epMeta.season_number || "",

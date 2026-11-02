@@ -14,6 +14,92 @@ window.search = {
     result: [],
   },
 
+  recentKey: "cr_recent_searches",
+
+  getRecentSearches: function () {
+    try {
+      var raw = window.localStorage.getItem(search.recentKey);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(function (q) {
+            return typeof q === "string" && q.trim().length >= 2;
+          });
+        }
+      }
+    } catch (e) {}
+    return [];
+  },
+
+  saveRecentSearch: function (query) {
+    var clean = String(query || "").trim();
+    if (clean.length < 2) return;
+    var list = search.getRecentSearches().filter(function (q) {
+      return q.toLowerCase() !== clean.toLowerCase();
+    });
+    list.unshift(clean);
+    if (list.length > 6) {
+      list = list.slice(0, 6);
+    }
+    try {
+      window.localStorage.setItem(search.recentKey, JSON.stringify(list));
+    } catch (e) {}
+    search.renderRecentSearches();
+  },
+
+  removeRecentSearch: function (query) {
+    var clean = String(query || "").trim();
+    var list = search.getRecentSearches().filter(function (q) {
+      return q.toLowerCase() !== clean.toLowerCase();
+    });
+    try {
+      window.localStorage.setItem(search.recentKey, JSON.stringify(list));
+    } catch (e) {}
+    search.renderRecentSearches();
+  },
+
+  clearRecentSearches: function () {
+    try {
+      window.localStorage.removeItem(search.recentKey);
+    } catch (e) {}
+    search.renderRecentSearches();
+    if (typeof window.showToast === "function") {
+      window.showToast("Cleared recent searches", "removed");
+    }
+  },
+
+  renderRecentSearches: function () {
+    var barEl = document.getElementById("search-recent-bar");
+    if (!barEl) return;
+    var list = search.getRecentSearches();
+    if (!list.length) {
+      barEl.innerHTML = "";
+      barEl.style.display = "none";
+      return;
+    }
+    var esc =
+      typeof mapper !== "undefined" && mapper.escapeHtml
+        ? mapper.escapeHtml
+        : function (s) {
+            return String(s == null ? "" : s)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          };
+    barEl.style.display = "flex";
+    barEl.innerHTML =
+      `<span class="search-recent-label"><i class="fa-solid fa-clock-rotate-left"></i> Recent:</span>` +
+      list
+        .map(function (q) {
+          var safeQ = esc(q);
+          return `<div class="recent-search-chip" data-query="${safeQ}"><span class="recent-chip-text">${safeQ}</span><button type="button" class="recent-chip-remove" data-remove-query="${safeQ}" title="Remove from recent searches"><i class="fa-solid fa-xmark"></i></button></div>`;
+        })
+        .join("") +
+      `<button type="button" id="search-recent-clear" class="recent-clear-all" title="Clear all recent searches">Clear All</button>`;
+  },
+
   init: function () {
     var search_element = document.createElement("div");
     search_element.id = search.id;
@@ -27,6 +113,7 @@ window.search = {
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
+        <div id="search-recent-bar" class="search-recent-bar" style="display:none;"></div>
         <div class="list-container">
           <div class="list-container-over" style="grid-template-columns: repeat(${search.items_per_row}, 1fr);"></div>
         </div>
@@ -36,6 +123,7 @@ window.search = {
       </div>`;
 
     document.body.appendChild(search_element);
+    search.renderRecentSearches();
     var inputBox = document.getElementById("search-screen_input");
     search.input = inputBox ? inputBox.querySelector("input") : null;
     var clearBtn = document.getElementById("search-clear-btn");
@@ -80,13 +168,17 @@ window.search = {
 
   _reqId: 0,
 
-  start: function () {
+  start: function (saveImmediate) {
     if (!search.input || !search.input.value.trim()) return;
+    var queryStr = search.input.value.trim();
+    if (saveImmediate) {
+      search.saveRecentSearch(queryStr);
+    }
     var currentReq = ++search._reqId;
     loading.start();
     service.search({
       data: {
-        query: search.input.value.trim(),
+        query: queryStr,
       },
       success: function (response) {
         if (currentReq !== search._reqId) return;
@@ -95,11 +187,14 @@ window.search = {
         var elements_content = "";
         if (!search.data.result || search.data.result.length === 0) {
           $(".list-container-over").html(
-            `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${search.input.value.trim().replace(/[<>&"]/g, "")}"</div>`
+            `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${queryStr.replace(/[<>&"]/g, "")}"</div>`
           );
           search.last_postion = 0;
           search.scroll_data.rows = 0;
           return;
+        }
+        if (queryStr.length >= 3) {
+          search.saveRecentSearch(queryStr);
         }
         var esc =
           typeof mapper !== "undefined" && mapper.escapeHtml

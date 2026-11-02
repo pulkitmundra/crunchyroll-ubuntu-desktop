@@ -9,8 +9,14 @@ window.historyScreen = {
     history_element.innerHTML = `
     <div class="content">
       <div class="screen-header">
-        <span class="screen-eyebrow">Activity</span>
-        <h1 class="screen-title">Watch History</h1>
+        <div class="screen-header-left">
+          <span class="screen-eyebrow">Activity</span>
+          <h1 class="screen-title">Watch History</h1>
+        </div>
+        <button type="button" id="history-clear-all-btn" class="history-clear-all-btn" style="display:none;" title="Clear all watch history">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>Clear History</span>
+        </button>
       </div>
       <div class="list-container">
         <div class="list-container-over" id="history-list"></div>
@@ -22,17 +28,28 @@ window.historyScreen = {
 
     document.body.appendChild(history_element);
 
+    historyScreen.loadHistory();
+  },
+
+  loadHistory: function () {
     loading.start();
     service.history({
       success: function (response) {
         var elements = "";
         historyScreen.data = mapper.history(response);
-        if (!historyScreen.data || historyScreen.data.length === 0) {
-          document.getElementById("history-list").innerHTML =
-            `<div class="history-empty">No watch history yet.</div>`;
+        var listEl = document.getElementById("history-list");
+        var clearBtn = document.getElementById("history-clear-all-btn");
+        if (!listEl) {
           loading.end();
           return;
         }
+        if (!historyScreen.data || historyScreen.data.length === 0) {
+          listEl.innerHTML = `<div class="history-empty">No watch history yet.</div>`;
+          if (clearBtn) clearBtn.style.display = "none";
+          loading.end();
+          return;
+        }
+        if (clearBtn) clearBtn.style.display = "inline-flex";
         var esc =
           typeof mapper !== "undefined" && mapper.escapeHtml
             ? mapper.escapeHtml
@@ -47,10 +64,18 @@ window.historyScreen = {
           var epNum = element.episode || element.episode_number || "";
           var epTitle = element.episode_title || "";
           var epMeta = epNum ? `E${epNum}${epTitle ? " - " + epTitle : ""}` : epTitle;
+          var safeContentId = esc(element.content_id || "");
+          var safeLabel = esc(
+            (element.title || "Episode") + (epNum ? " E" + epNum : "")
+          );
+          var removeBtn = safeContentId
+            ? `<button type="button" class="history-quick-remove" data-content-id="${safeContentId}" data-label="${safeLabel}" title="Remove from Watch History"><i class="fa-solid fa-trash-can"></i></button>`
+            : "";
           elements += `
           <div class="item${index === 0 ? " selected" : ""}">
             <img src="${esc(element.background)}" alt="">
             ${badges}
+            ${removeBtn}
             <div class="history-card-info">
               <div class="history-series-title">${esc(element.title || "")}</div>
               ${epMeta ? `<div class="history-ep-title">${esc(epMeta)}</div>` : ""}
@@ -58,7 +83,7 @@ window.historyScreen = {
             ${historyScreen.view(element)}
           </div>`;
         });
-        document.getElementById("history-list").innerHTML = elements;
+        listEl.innerHTML = elements;
         loading.end();
       },
       error: function (error) {
@@ -68,7 +93,71 @@ window.historyScreen = {
     });
   },
 
+  removeHistoryItem: function (contentId, label) {
+    if (!contentId) return;
+    var displayLabel = label || "item";
+    loading.start();
+    service.deleteHistoryItem({
+      data: { content_id: contentId },
+      success: function () {
+        loading.end();
+        historyScreen.loadHistory();
+        if (typeof window.showToast === "function") {
+          window.showToast(
+            'Removed "' + displayLabel + '" from Watch History',
+            "removed"
+          );
+        }
+      },
+      error: function () {
+        loading.end();
+        if (typeof window.showToast === "function") {
+          window.showToast(
+            'Failed to remove "' + displayLabel + '" from Watch History',
+            "error"
+          );
+        }
+      },
+    });
+  },
+
+  clearAllHistory: function () {
+    var performClear = function () {
+      loading.start();
+      service.clearHistory({
+        success: function () {
+          loading.end();
+          historyScreen.loadHistory();
+          if (typeof window.showToast === "function") {
+            window.showToast("Cleared Watch History", "removed");
+          }
+        },
+        error: function () {
+          loading.end();
+          if (typeof window.showToast === "function") {
+            window.showToast("Failed to clear Watch History", "error");
+          }
+        },
+      });
+    };
+    if (typeof window.showConfirmDialog === "function") {
+      window.showConfirmDialog({
+        title: "Clear Watch History?",
+        message:
+          "Do you really want to clear your entire Watch History? This cannot be undone.",
+        confirmText: "Clear History",
+        cancelText: "Cancel",
+        onConfirm: performClear,
+      });
+    } else {
+      performClear();
+    }
+  },
+
   destroy: function () {
+    if (typeof window.closeConfirmDialog === "function") {
+      window.closeConfirmDialog();
+    }
     historyScreen.data = [];
     $("[id='history-screen']").remove();
   },

@@ -1,5 +1,6 @@
 const CONTROLLER_KEY = "controllerSupport";
 const PLAYBACK_PREFS_KEY = "cr_playback_prefs";
+const SUBTITLE_PREFS_KEY = "cr_subtitle_prefs";
 
 window.settings = {
   id: "settings-screen",
@@ -10,6 +11,50 @@ window.settings = {
     autoSkipRecap: false,
     autoPlayNext: true,
     showSkipButton: true,
+  },
+  defaultSubtitlePrefs: {
+    size: "default",
+    background: "shadow",
+  },
+  subtitleSizes: {
+    small: "Small (85%)",
+    default: "Default (100%)",
+    large: "Large (125%)",
+    xlarge: "Extra Large (150%)",
+  },
+  subtitleBackgrounds: {
+    shadow: "Drop Shadow (Default)",
+    pill: "Translucent Pill",
+    box: "Solid Dark Box",
+  },
+  getSubtitlePrefs: function () {
+    var base = Object.assign({}, settings.defaultSubtitlePrefs);
+    try {
+      var raw = window.localStorage.getItem(SUBTITLE_PREFS_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          if (parsed.size && settings.subtitleSizes[parsed.size]) {
+            base.size = parsed.size;
+          }
+          if (parsed.background && settings.subtitleBackgrounds[parsed.background]) {
+            base.background = parsed.background;
+          }
+        }
+      }
+    } catch (e) {}
+    return base;
+  },
+  setSubtitlePref: function (key, val) {
+    var prefs = settings.getSubtitlePrefs();
+    prefs[key] = val;
+    try {
+      window.localStorage.setItem(SUBTITLE_PREFS_KEY, JSON.stringify(prefs));
+    } catch (e) {}
+    if (typeof player !== "undefined" && typeof player.applySubtitlePrefs === "function") {
+      player.applySubtitlePrefs();
+    }
+    return prefs;
   },
   playbackToggleDefs: [
     {
@@ -87,6 +132,18 @@ window.settings = {
     {
       id: "subtitlelang",
       label: "settings.menu.subtitle_lang",
+      type: "list",
+    },
+    {
+      id: "subtitlesize",
+      label: "settings.menu.subtitle_size",
+      title: "Subtitle Size",
+      type: "list",
+    },
+    {
+      id: "subtitlebg",
+      label: "settings.menu.subtitle_bg",
+      title: "Subtitle Background",
       type: "list",
     },
     {
@@ -354,6 +411,14 @@ window.settings = {
             var options = session.languages.subtitles;
             var active = session.storage.account.language;
             break;
+          case "subtitlesize":
+            var options = settings.subtitleSizes;
+            var active = settings.getSubtitlePrefs().size;
+            break;
+          case "subtitlebg":
+            var options = settings.subtitleBackgrounds;
+            var active = settings.getSubtitlePrefs().background;
+            break;
           case "videoquality":
             var options = settings.qualities;
             var active = session.storage.quality || "auto";
@@ -443,6 +508,30 @@ window.settings = {
               });
             };
             break;
+          case "subtitlesize":
+            var options = settings.subtitleSizes;
+            var method = function (value) {
+              settings.setSubtitlePref("size", value);
+              if (typeof window.showToast === "function") {
+                window.showToast(
+                  "Subtitle Size set to " + (settings.subtitleSizes[value] || value),
+                  "added"
+                );
+              }
+            };
+            break;
+          case "subtitlebg":
+            var options = settings.subtitleBackgrounds;
+            var method = function (value) {
+              settings.setSubtitlePref("background", value);
+              if (typeof window.showToast === "function") {
+                window.showToast(
+                  "Subtitle Background set to " + (settings.subtitleBackgrounds[value] || value),
+                  "added"
+                );
+              }
+            };
+            break;
           case "videoquality":
             var options = settings.qualities;
             var method = function (value) {
@@ -523,7 +612,7 @@ window.settings = {
           (typeof changelog !== "undefined" &&
             changelog.data &&
             changelog.data.version) ||
-          "v2.0.1";
+          "v2.1.0";
         return `
         <div id="about-panel">
           <div class="about-header">
@@ -566,6 +655,7 @@ window.settings = {
               <div class="shortcut-item"><kbd>J / L</kbd><span>Seek -10s / +10s</span></div>
               <div class="shortcut-item"><kbd>M / Wheel</kbd><span>Mute &amp; Volume</span></div>
               <div class="shortcut-item"><kbd>[ / ]</kbd><span>Playback Speed</span></div>
+              <div class="shortcut-item"><kbd>Ctrl+Shift+S</kbd><span>Capture Frame</span></div>
               <div class="shortcut-item"><kbd>C / E / S / Z</kbd><span>Subs / Eps / Skip / Aspect</span></div>
             </div>
           </div>

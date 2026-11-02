@@ -1,8 +1,13 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.0.1",
+    version: "v2.1.0",
     changes: [
+      {
+        title: "GNOME Media Keys, Frame Capture, Season Switcher & History Controls",
+        description:
+          "Added Linux/GNOME MediaSession (MPRIS) integration, HUD-free frame capture (Ctrl+Shift+S), in-drawer season switcher, custom list rename, watch history removal, recent searches, episode watched toggles, and subtitle appearance settings.",
+      },
       {
         title: "Delete Custom List Confirmation Dialog & Toast Notifications",
         description:
@@ -12,11 +17,6 @@ window.changelog = {
         title: "Star Ratings, Sub | Dub Badges & Custom Lists",
         description:
           "Added Crunchyroll star ratings, Sub | Dub badges on cards and banners, and a Manage Lists modal for Watchlist and Custom Lists.",
-      },
-      {
-        title: "Skip Credits, Skip Recap & Episode Drawer (E)",
-        description:
-          "Added Skip Recap and Skip Credits alongside Skip Intro, plus an in-player Season Episode Drawer (press E or click the list icon).",
       },
     ],
   },

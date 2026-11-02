@@ -12,9 +12,17 @@
 
 #history-screen .screen-header {
   display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+#history-screen .screen-header-left {
+  display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: 18px;
 }
 
 #history-screen .screen-eyebrow {
@@ -31,6 +39,76 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #ffffff;
+}
+
+#history-screen .history-clear-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 18, 26, 0.85);
+  color: rgba(255, 255, 255, 0.78);
+  font-family: "Lato", sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+#history-screen .history-clear-all-btn i {
+  color: #f87171;
+}
+
+#history-screen .history-clear-all-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.75);
+  color: #ff8a8a;
+  transform: translateY(-1px);
+}
+
+#history-screen .content .list-container .list-container-over .item .history-quick-remove {
+  position: absolute;
+  bottom: 44px;
+  right: 10px;
+  z-index: 5;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 14, 18, 0.88);
+  color: #ff7b7b;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+#history-screen .content .list-container .list-container-over .item:hover .history-quick-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#history-screen .content .list-container .list-container-over .item .history-quick-remove:hover {
+  background: #ef4444;
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: scale(1.08);
 }
 
 #history-screen .history-empty {

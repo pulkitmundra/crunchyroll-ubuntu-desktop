@@ -2,6 +2,27 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.1.0] - 2026-11-02
+
+### Added
+- **Linux / GNOME Desktop Media Integration - MPRIS (`server/js/screen/video.js`, `server/js/core/player.js`):**
+  - Integrated the `navigator.mediaSession` API to broadcast live anime metadata (episode title, series name, season/episode number, and thumbnail artwork) and playback position state to the Ubuntu top-bar calendar/media tray, GNOME lock screen, hardware media keys (`Play/Pause`, `Next`, `Previous`), and Bluetooth earbuds.
+- **Custom List Rename & Input Prompt Modal (`#cr-prompt-modal` in `js/app.js`, `css/app.css`, `server/js/screen/home.details.js`, `server/js/screen/mylist.js`, `server/css/home.css`, `server/css/mylist.css`):**
+  - Added a frosted-glass input prompt modal (`window.showPromptDialog`) and edit/rename buttons (`.crunchylist-rename-btn` in the Manage Lists modal and `.mylist-rename-list-btn` on Custom List row headers in `My List`) backed by `service.renameCustomList` (`PATCH /content/v2/{account_id}/custom-lists/{list_id}`), complete with empty-name validation and confirmation toasts.
+- **Watch History Item Removal & Clear All History (`server/js/core/service.js`, `server/js/core/mappers/crunchyroll.js`, `server/js/screen/history.js`, `server/css/history.css`, `js/app.js`):**
+  - Added `service.deleteHistoryItem` and `service.clearHistory` API endpoints, a 1-click hover trash button (`.history-quick-remove`) on each Watch History card, and a header **Clear History** button (`#history-clear-all-btn`) guarded by the confirmation modal.
+- **In-Player Episodes Drawer Season Switcher (`server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Added `<` / `>` season navigation buttons (`#player-season-prev` and `#player-season-next`, plus `Left` / `Right` arrow key support) inside the in-player Episodes drawer (`E`) so you can browse and play episodes from any season without leaving the video player.
+- **Subtitle Appearance Customization (`server/js/screen/settings.js`, `server/js/core/player.js`, `server/css/video.css`):**
+  - Added **Subtitle Size** (`Small 85%`, `Default 100%`, `Large 125%`, `Extra Large 150%`) and **Subtitle Background** (`Drop Shadow`, `Translucent Pill`, `Solid Dark Box`) preferences in **Settings**, persisted in `localStorage` (`cr_subtitle_prefs`).
+- **HUD-Free Video Frame Screenshot Capture (`index.js`, `preload.js`, `server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Added a camera button in the player OSD and `Ctrl + Shift + S` shortcut that temporarily hides all HUD overlays (`body.capturing-screenshot`), saves a clean PNG frame to `~/Pictures/Crunchyroll/Crunchyroll_<Series>_S<X>E<Y>_<timestamp>.png`, copies the image to the system clipboard, and shows a confirmation toast.
+- **Recent Searches Chips & Episode Watched / Unwatched Toggle (`server/js/screen/search.js`, `server/css/search.css`, `server/js/screen/home.episodes.js`, `server/css/home.css`, `js/app.js`):**
+  - Added clickable **Recent Searches** chips (`#search-recent-bar`, up to 6 recent queries persisted in `localStorage`) with individual `x` remove buttons and a `Clear` action on the Search screen.
+  - Added a 1-click **Mark as Watched / Unwatched** checkmark button (`.episode-watched-toggle`) on every episode card in the Seasons & Episodes screen (`#home_episodes-screen`) that updates playhead state via `service.setHistory` and syncs the progress bar in-place.
+
+---
+
 ## [v2.0.1] - 2026-11-01
 
 ### Added

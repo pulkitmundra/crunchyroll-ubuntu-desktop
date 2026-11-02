@@ -48,9 +48,27 @@ window.player = {
     }
   },
 
+  applySubtitlePrefs: function () {
+    var prefs =
+      typeof settings !== "undefined" &&
+      typeof settings.getSubtitlePrefs === "function"
+        ? settings.getSubtitlePrefs()
+        : { size: "default", background: "shadow" };
+    if (document.body) {
+      document.body.setAttribute("data-sub-size", prefs.size || "default");
+      document.body.setAttribute("data-sub-bg", prefs.background || "shadow");
+    }
+    var vs = document.getElementById("video-screen");
+    if (vs) {
+      vs.setAttribute("data-sub-size", prefs.size || "default");
+      vs.setAttribute("data-sub-bg", prefs.background || "shadow");
+    }
+  },
+
   config: function (timeFunction, endFunction) {
     player.deleteVideo();
     var v = player.getVideo();
+    player.applySubtitlePrefs();
     try {
       var savedVol = parseFloat(localStorage.getItem("cr_volume"));
       if (!isNaN(savedVol) && savedVol >= 0 && savedVol <= 1) {
@@ -75,6 +93,9 @@ window.player = {
         video.showBTN("pause");
       } else {
         video.hideBTN();
+      }
+      if (typeof video !== "undefined" && typeof video.syncMediaSessionPosition === "function") {
+        video.syncMediaSessionPosition();
       }
     });
     //player.getVideo().addEventListener("play", player.onPlay);
@@ -201,12 +222,18 @@ window.player = {
     player.getVideo().pause();
     player.state = player.states.PAUSED;
     video.showBTN("pause");
+    if (typeof video !== "undefined" && typeof video.syncMediaSessionPosition === "function") {
+      video.syncMediaSessionPosition();
+    }
   },
 
   resume: function () {
     player.getVideo().play();
     video.hideBTN();
     player.state = player.states.PLAYING;
+    if (typeof video !== "undefined" && typeof video.syncMediaSessionPosition === "function") {
+      video.syncMediaSessionPosition();
+    }
   },
 
   playPause: function () {

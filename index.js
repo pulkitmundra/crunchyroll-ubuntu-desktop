@@ -1,6 +1,7 @@
 const electron = require("electron");
-const { app, BrowserWindow, ipcMain, screen } = electron;
+const { app, BrowserWindow, ipcMain, screen, clipboard } = electron;
 const path = require("path");
+const fs = require("fs");
 
 let isMiniPlayer = false;
 let isPinned = false;
@@ -605,6 +606,53 @@ function createWindow() {
   ipcMain.handle("toggleFullScreen", (event) => {
     if (!isTrustedSender(event)) return null;
     return toggleFullScreenMode(win);
+  });
+  ipcMain.handle("captureScreenshot", async (event, meta) => {
+    if (!isTrustedSender(event) || !win || win.isDestroyed()) {
+      return { ok: false, error: "Window unavailable" };
+    }
+    try {
+      const image = await win.webContents.capturePage();
+      const picturesDir = path.join(app.getPath("pictures"), "Crunchyroll");
+      fs.mkdirSync(picturesDir, { recursive: true });
+      const rawLabel =
+        meta && typeof meta.label === "string" && meta.label.trim()
+          ? meta.label.trim()
+          : "Frame";
+      const safeLabel = rawLabel
+        .replace(/[^a-zA-Z0-9._-]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 60) || "Frame";
+      const now = new Date();
+      const pad = (n) => (n < 10 ? "0" + n : "" + n);
+      const stamp =
+        now.getFullYear() +
+        pad(now.getMonth() + 1) +
+        pad(now.getDate()) +
+        "_" +
+        pad(now.getHours()) +
+        pad(now.getMinutes()) +
+        pad(now.getSeconds());
+      const fileName = `Crunchyroll_${safeLabel}_${stamp}.png`;
+      const filePath = path.join(picturesDir, fileName);
+      fs.writeFileSync(filePath, image.toPNG());
+      try {
+        if (clipboard && typeof clipboard.writeImage === "function") {
+          clipboard.writeImage(image);
+        }
+      } catch (_) {}
+      return {
+        ok: true,
+        fileName,
+        filePath,
+        displayPath: `~/Pictures/Crunchyroll/${fileName}`,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err && err.message ? err.message : "Capture failed",
+      };
+    }
   });
 
   ipcMain.on("openExternal", (event, url) => {

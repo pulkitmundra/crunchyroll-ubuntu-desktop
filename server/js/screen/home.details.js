@@ -363,6 +363,9 @@ window.home_details = {
     if (typeof window.closeConfirmDialog === "function") {
       window.closeConfirmDialog();
     }
+    if (typeof window.closePromptDialog === "function") {
+      window.closePromptDialog();
+    }
     home_details.listModalOpen = false;
     $("#crunchylist-modal").remove();
   },
@@ -479,6 +482,9 @@ window.home_details = {
           </div>
           <div class="crunchylist-row-actions">
             <span class="crunchylist-status-pill">${isMember ? "Added - Click to Remove" : "+ Add to List"}</span>
+            <button type="button" class="crunchylist-rename-btn" data-rename-list-id="${safeId}" data-rename-list-title="${safeTitle}" title="Rename Custom List">
+              <i class="fa-solid fa-pen"></i>
+            </button>
             <button type="button" class="crunchylist-delete-btn" data-delete-list-id="${safeId}" data-delete-list-title="${safeTitle}" title="Delete Custom List">
               <i class="fa-solid fa-trash-can"></i>
             </button>
@@ -532,6 +538,44 @@ window.home_details = {
         if (typeof window.showToast === "function") {
           window.showToast('Failed to update "' + listTitle + '"', "error");
         }
+      },
+    });
+  },
+
+  renameCustomListById: function (listId, currentTitle) {
+    if (!listId) return;
+    var oldTitle = currentTitle || "Custom List";
+    if (typeof window.showPromptDialog !== "function") return;
+    window.showPromptDialog({
+      title: "Rename Custom List",
+      message: 'Enter a new name for "' + oldTitle + '":',
+      initialValue: oldTitle,
+      placeholder: "Custom list name...",
+      confirmText: "Save Name",
+      cancelText: "Cancel",
+      onConfirm: function (newTitle) {
+        if (!newTitle || newTitle === oldTitle) return;
+        service.renameCustomList({
+          data: { list_id: listId, title: newTitle },
+          success: function () {
+            home_details.listsChanged = true;
+            home_details.refreshCustomLists();
+            if (typeof window.showToast === "function") {
+              window.showToast(
+                'Renamed list to "' + newTitle + '"',
+                "added"
+              );
+            }
+          },
+          error: function () {
+            if (typeof window.showToast === "function") {
+              window.showToast(
+                'Failed to rename "' + oldTitle + '"',
+                "error"
+              );
+            }
+          },
+        });
       },
     });
   },

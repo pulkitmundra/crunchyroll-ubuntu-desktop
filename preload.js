@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld("electronUtilsRender", {
   toggleMiniPlayer: () => ipcRenderer.invoke("toggleMiniPlayer"),
   toggleAlwaysOnTop: () => ipcRenderer.invoke("toggleAlwaysOnTop"),
   toggleFullScreen: () => ipcRenderer.invoke("toggleFullScreen"),
+  captureScreenshot: (meta) => ipcRenderer.invoke("captureScreenshot", meta),
   openExternal: (url) => ipcRenderer.send("openExternal", url),
   onWindowModeChanged: (callback) => {
     if (typeof callback === "function") {

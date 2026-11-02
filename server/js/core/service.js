@@ -450,6 +450,62 @@ window.service = {
     });
   },
 
+  deleteHistoryItem: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/watch-history/${request.data.content_id}?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "DELETE",
+            headers: headers,
+          },
+        )
+          .then((response) => {
+            if (!response.ok && response.status >= 400) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.text();
+          })
+          .then((text) => request.success && request.success(text))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
+  clearHistory: function (request) {
+    return session.refresh({
+      success: function (storage) {
+        var headers = new Headers();
+        headers.append("Authorization", `Bearer ${storage.access_token}`);
+        headers.append("Content-Type", "application/json");
+        fetch(
+          `${service.api.url}/content/v2/${storage.id}/watch-history?preferred_audio_language=${storage.account.audio}&locale=${storage.language}`,
+          {
+            method: "DELETE",
+            headers: headers,
+          },
+        )
+          .then((response) => {
+            if (!response.ok && response.status >= 400) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            return response.text();
+          })
+          .then((text) => request.success && request.success(text))
+          .catch((error) => request.error && request.error(error));
+      },
+      error: function (error) {
+        request.error && request.error(error);
+      },
+    });
+  },
+
   languages: function (request) {
     fetch(
       `${service.api.static}/config/i18n/v3/${

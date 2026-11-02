@@ -233,6 +233,7 @@ body:not(.mouse-mode) #mylist-screen .content .row.selected .row-content .slick-
   padding-left: 124px;
 }
 
+#mylist-screen .content .row .row-title .mylist-rename-list-btn,
 #mylist-screen .content .row .row-title .mylist-delete-list-btn {
   display: inline-flex;
   align-items: center;
@@ -254,6 +255,13 @@ body:not(.mouse-mode) #mylist-screen .content .row.selected .row-content .slick-
     border-color 0.15s ease,
     color 0.15s ease,
     transform 0.15s ease;
+}
+
+#mylist-screen .content .row .row-title .mylist-rename-list-btn:hover {
+  background: rgba(244, 117, 33, 0.22);
+  border-color: rgba(244, 117, 33, 0.78);
+  color: #ffb84d;
+  transform: translateY(-1px);
 }
 
 #mylist-screen .content .row .row-title .mylist-delete-list-btn:hover {

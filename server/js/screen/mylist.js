@@ -78,6 +78,9 @@ window.mylist = {
     if (typeof window.closeConfirmDialog === "function") {
       window.closeConfirmDialog();
     }
+    if (typeof window.closePromptDialog === "function") {
+      window.closePromptDialog();
+    }
     mylist.data.lists = [];
     mylist.data.loadedLists = 0;
     mylist.selectedRow = 0;
@@ -297,12 +300,12 @@ window.mylist = {
           : String(element.title || "Custom List");
         var rowTitleText = mylist.escapeHtml(rawListTitle);
         var safeListId = mylist.escapeHtml(element.list_id || "watchlist");
-        var deleteListBtn = !isWatchlist
-          ? `<button type="button" class="mylist-delete-list-btn" data-delete-list-id="${safeListId}" data-delete-list-title="${rowTitleText}" title="Delete Custom List"><i class="fa-solid fa-trash-can"></i><span>Delete List</span></button>`
+        var listActionBtns = !isWatchlist
+          ? `<button type="button" class="mylist-rename-list-btn" data-rename-list-id="${safeListId}" data-rename-list-title="${rowTitleText}" title="Rename Custom List"><i class="fa-solid fa-pen"></i><span>Rename</span></button><button type="button" class="mylist-delete-list-btn" data-delete-list-id="${safeListId}" data-delete-list-title="${rowTitleText}" title="Delete Custom List"><i class="fa-solid fa-trash-can"></i><span>Delete List</span></button>`
           : "";
         poster_items += `
       <div class="row ${index === mylist.selectedRow ? "selected" : ""}" data-list-id="${safeListId}">
-        <div class="row-title"><span class="row-title-text">${rowTitleText}</span>${deleteListBtn}</div>
+        <div class="row-title"><span class="row-title-text">${rowTitleText}</span>${listActionBtns}</div>
         <div class="row-content fixed-error">`;
         element.items.forEach((item) => {
           poster_items += mylist.createItem(
@@ -399,6 +402,47 @@ window.mylist = {
         error: onError,
       });
     }
+  },
+
+  renameCustomList: function (listId, currentTitle) {
+    if (!listId || listId === "watchlist") return;
+    var oldTitle = currentTitle || "Custom List";
+    if (typeof window.showPromptDialog !== "function") return;
+    window.showPromptDialog({
+      title: "Rename Custom List",
+      message: 'Enter a new name for "' + oldTitle + '":',
+      initialValue: oldTitle,
+      placeholder: "Custom list name...",
+      confirmText: "Save Name",
+      cancelText: "Cancel",
+      onConfirm: function (newTitle) {
+        if (!newTitle || newTitle === oldTitle) return;
+        loading.start();
+        service.renameCustomList({
+          data: { list_id: listId, title: newTitle },
+          success: function () {
+            loading.end();
+            mylist.destroy();
+            mylist.init();
+            if (typeof window.showToast === "function") {
+              window.showToast(
+                'Renamed list to "' + newTitle + '"',
+                "added"
+              );
+            }
+          },
+          error: function () {
+            loading.end();
+            if (typeof window.showToast === "function") {
+              window.showToast(
+                'Failed to rename "' + oldTitle + '"',
+                "error"
+              );
+            }
+          },
+        });
+      },
+    });
   },
 
   deleteCustomList: function (listId, listTitle) {
