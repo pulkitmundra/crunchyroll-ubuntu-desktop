@@ -1,0 +1,226 @@
+name: Build and Publish Snap
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - "CHANGELOG.md"
+      - "LICENSE"
+      - ".github/FUNDING.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Snap Store channel to release to (e.g. stable, candidate, edge)"
+        required: false
+        default: "stable"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    name: Build & Publish to Snap Store
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Snap package (core22)
+        run: |
+          set -euo pipefail
+          PRIME="/tmp/snap-prime"
+          rm -rf "$PRIME"
+          mkdir -p "$PRIME/meta/gui" "$PRIME/opt/crunchyroll" "$PRIME/bin"
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq squashfs-tools dpkg-dev jq curl ca-certificates >/dev/null
+
+          mkdir -p /tmp/debs
+          cd /tmp/debs
+          apt-get download -qq \
+            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libatspi2.0-0 \
+            libcups2 libdrm2 libgbm1 libgtk-3-0 libgdk-pixbuf-2.0-0 \
+            libcairo2 libcairo-gobject2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+            libasound2 libpulse0 libxss1 libxtst6 libx11-6 libx11-xcb1 libxcb1 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxext6 libxi6 \
+            libxrender1 libxcursor1 libxinerama1 libxkbcommon0 libepoxy0 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1 libwayland-server0 \
+            libharfbuzz0b libthai0 libdatrie1 libgraphite2-3 libpixman-1-0 \
+            libxcb-render0 libxcb-shm0 libxcb-dri3-0 libxcb-present0 libxcb-sync1 \
+            libxshmfence1 libflac8 libogg0 libvorbis0a libvorbisenc2 libasyncns0 libsndfile1
+
+          for deb in /tmp/debs/*.deb; do
+            dpkg-deb -x "$deb" "$PRIME"
+          done
+
+          cd "$GITHUB_WORKSPACE"
+          APPIMAGE_URL="https://github.com/aarron-lee/crunchyroll-linux/releases/download/v1.1.6/Crunchyroll-Linux-1.1.6.AppImage"
+          APPIMAGE_SHA256="ba06670fb21c8e5afa1d4241a4bf911fdbfd9b47bc1ed4d449e6d05645cccdfa"
+          curl -fsSL "$APPIMAGE_URL" -o /tmp/crunchyroll-base.AppImage
+          echo "${APPIMAGE_SHA256}  /tmp/crunchyroll-base.AppImage" | sha256sum -c -
+          chmod +x /tmp/crunchyroll-base.AppImage
+          /tmp/crunchyroll-base.AppImage --appimage-extract >/dev/null
+
+          cp -a squashfs-root/. "$PRIME/opt/crunchyroll/"
+          rm -rf \
+            "$PRIME/opt/crunchyroll/resources/app.asar" \
+            "$PRIME/opt/crunchyroll/resources/app" \
+            "$PRIME/opt/crunchyroll/.DirIcon" \
+            "$PRIME/opt/crunchyroll/crunchyroll-linux.png" \
+            "$PRIME/opt/crunchyroll/crunchyroll-linux.desktop" \
+            "$PRIME/opt/crunchyroll/AppRun" \
+            "$PRIME/opt/crunchyroll/chrome-sandbox"
+
+          APP_DIR="$PRIME/opt/crunchyroll/resources/app"
+          mkdir -p "$APP_DIR"
+          cp -r index.js preload.js index.html package.json css js server "$APP_DIR/"
+
+          cp "squashfs-root/usr/share/icons/hicolor/256x256/apps/crunchyroll-linux.png" \
+             "$PRIME/meta/gui/icon.png"
+          cp "snap/gui/crunchyroll-ubuntu-desktop.desktop" \
+             "$PRIME/meta/gui/crunchyroll-ubuntu-desktop.desktop"
+
+          cat << 'LAUNCH' > "$PRIME/bin/crunchyroll-desktop"
+          #!/bin/sh
+          export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}"
+          export ELECTRON_FORCE_IS_PACKAGED=true
+          export LD_LIBRARY_PATH="$SNAP/opt/crunchyroll/usr/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+          exec "$SNAP/opt/crunchyroll/crunchyroll-linux" \
+            --no-sandbox \
+            --ozone-platform=x11 \
+            "$@"
+          LAUNCH
+          chmod 0755 "$PRIME/bin/crunchyroll-desktop"
+
+          VERSION="$(jq -r '.version' package.json)"
+          cat << YAML > "$PRIME/meta/snap.yaml"
+          name: crunchyroll-ubuntu-desktop
+          version: ${VERSION}
+          title: Crunchyroll Desktop (Unofficial)
+          summary: Unofficial Linux desktop client for Crunchyroll with Widevine, PiP & MPRIS
+          description: |
+            Crunchyroll Desktop (Unofficial) is an open-source Linux desktop client for
+            streaming Crunchyroll with native desktop integration and a custom dark UI.
+
+            Key Features:
+            * Built-in Widevine DRM playback support via Castlabs Electron runtime
+            * Glassmorphic dark UI with floating sidebar dock and smooth mouse/trackpad navigation
+            * Smart Auto-PiP (Picture-in-Picture) mini-player when switching workspaces or windows
+            * In-player Episodes Drawer with instant \`<\` / \`>\` season switcher and watched indicators
+            * Native Linux desktop MPRIS media controls (keyboard play/pause/next/prev & lock-screen artwork)
+            * Custom Lists (create, rename, delete) and Watchlist management with toast confirmations
+            * Watch History management (remove single episodes or clear history)
+            * Subtitle appearance customization (size, color, background opacity, edge style)
+            * HUD-free 1080p video frame screenshot capture (Ctrl+Shift+S)
+
+            Support the Project:
+            * Buy Me a Coffee: https://buymeacoffee.com/pulkitmundra
+            * GitHub Sponsors: https://github.com/sponsors/pulkitmundra
+
+            Disclaimer:
+            This is an independent, unofficial open-source community project developed by
+            Pulkit Mundra and contributors. It is NOT affiliated with, authorized,
+            maintained, sponsored, or endorsed by Crunchyroll, LLC or Sony Pictures
+            Entertainment. Crunchyroll and its logo are registered trademarks of
+            Crunchyroll, LLC. A valid Crunchyroll account is required to stream content.
+          license: GPL-3.0
+          base: core22
+          grade: stable
+          confinement: strict
+          architectures:
+            - amd64
+          apps:
+            crunchyroll-ubuntu-desktop:
+              command: bin/crunchyroll-desktop
+              plugs:
+                - network
+                - audio-playback
+                - desktop
+                - desktop-legacy
+                - wayland
+                - x11
+                - opengl
+                - browser-support
+                - home
+                - screen-inhibit-control
+          YAML
+
+          chmod -R a+rX,u+w,go-w "$PRIME"
+          chmod -R a-s "$PRIME"
+          mksquashfs "$PRIME" /tmp/crunchyroll-ubuntu-desktop.snap \
+            -noappend -comp lzo -all-root -no-xattrs -no-fragments >/dev/null
+          ls -lh /tmp/crunchyroll-ubuntu-desktop.snap
+
+      - name: Upload & Release to Canonical Snap Store
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          RELEASE_CHANNEL: ${{ inputs.channel || 'stable' }}
+        run: |
+          pip install --quiet craft-store pymacaroons requests
+          python3 - << 'PY'
+          import os, sys, time, requests
+          from craft_store import creds as cs_creds
+          from pymacaroons import Macaroon
+
+          snap_name = "crunchyroll-ubuntu-desktop"
+          snap_path = "/tmp/crunchyroll-ubuntu-desktop.snap"
+          channel = os.environ.get("RELEASE_CHANNEL", "stable")
+          channels = [channel] if channel != "stable" else ["stable", "candidate", "beta", "edge"]
+
+          raw = os.environ["SNAPCRAFT_STORE_CREDENTIALS"].strip()
+          u1 = cs_creds.unmarshal_u1_credentials(raw).model_dump(by_alias=True)
+          root_m = Macaroon.deserialize(u1["r"])
+          discharge_m = Macaroon.deserialize(u1["d"])
+          bound = root_m.prepare_for_request(discharge_m).serialize()
+          auth = f"Macaroon root={u1['r']}, discharge={bound}"
+
+          file_size = os.path.getsize(snap_path)
+          print(f"Uploading {snap_path} ({file_size / (1024*1024):.1f} MB)...")
+          with open(snap_path, "rb") as f:
+              up = requests.post(
+                  "https://storage.snapcraftcontent.com/unscanned-upload/",
+                  files={"binary": (os.path.basename(snap_path), f, "application/octet-stream")},
+                  headers={"Accept": "application/json"},
+                  timeout=600,
+              )
+          up.raise_for_status()
+          upload_id = up.json()["upload_id"]
+
+          push = requests.post(
+              "https://dashboard.snapcraft.io/dev/api/snap-push/",
+              json={"name": snap_name, "updown_id": upload_id, "binary_filesize": file_size, "channels": channels},
+              headers={"Authorization": auth, "Accept": "application/json", "Content-Type": "application/json"},
+              timeout=60,
+          )
+          push.raise_for_status()
+          status_url = push.json()["status_details_url"]
+
+          rev = None
+          for _ in range(60):
+              time.sleep(5)
+              st = requests.get(status_url, headers={"Authorization": auth, "Accept": "application/json"}, timeout=30)
+              if st.status_code == 200:
+                  data = st.json()
+                  rev = data.get("revision")
+                  if data.get("processed"):
+                      if not data.get("can_release"):
+                          print("Review errors:", data.get("errors"))
+                          sys.exit(1)
+                      break
+
+          if rev:
+              rel = requests.post(
+                  "https://dashboard.snapcraft.io/dev/api/snap-release/",
+                  json={"name": snap_name, "revision": str(rev), "channels": channels},
+                  headers={"Authorization": auth, "Accept": "application/json", "Content-Type": "application/json"},
+                  timeout=30,
+              )
+              rel.raise_for_status()
+              print("Released revision", rev, "to", channels)
+          PY
