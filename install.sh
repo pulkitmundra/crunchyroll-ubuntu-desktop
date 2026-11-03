@@ -5,7 +5,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_DIR="$HOME/.local/opt/crunchyroll"
 APPIMAGE_PATH="$RUNTIME_DIR/Crunchyroll.AppImage"
 UNPACKED_DIR="$RUNTIME_DIR/unpacked"
-APPIMAGE_URL="https://github.com/aarron-lee/crunchyroll-linux/releases/download/v1.1.6/Crunchyroll-Linux-1.1.6.AppImage"
+APPIMAGE_URL="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/releases/download/v2.1.0/Crunchyroll-Linux-1.1.6.AppImage"
 APPIMAGE_SHA256="ba06670fb21c8e5afa1d4241a4bf911fdbfd9b47bc1ed4d449e6d05645cccdfa"
 
 echo "=== Crunchyroll Linux Desktop Installer ==="

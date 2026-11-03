@@ -59,7 +59,7 @@ jobs:
           done
 
           cd "$GITHUB_WORKSPACE"
-          APPIMAGE_URL="https://github.com/aarron-lee/crunchyroll-linux/releases/download/v1.1.6/Crunchyroll-Linux-1.1.6.AppImage"
+          APPIMAGE_URL="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/releases/download/v2.1.0/Crunchyroll-Linux-1.1.6.AppImage"
           APPIMAGE_SHA256="ba06670fb21c8e5afa1d4241a4bf911fdbfd9b47bc1ed4d449e6d05645cccdfa"
           curl -fsSL "$APPIMAGE_URL" -o /tmp/crunchyroll-base.AppImage
           echo "${APPIMAGE_SHA256}  /tmp/crunchyroll-base.AppImage" | sha256sum -c -
