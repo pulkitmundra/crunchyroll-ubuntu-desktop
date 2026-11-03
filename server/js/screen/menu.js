@@ -40,6 +40,14 @@ window.menu = {
       action: "browse.init",
     },
     {
+      id: "support",
+      title: "Buy Me a Coffee",
+      icon: "fa-solid fa-mug-hot",
+      tool: true,
+      customClass: "support-option",
+      externalUrl: "https://buymeacoffee.com/pulkitmundra",
+    },
+    {
       id: "settings",
       label: "menu.settings",
       icon: "fa-solid fa-gear",
@@ -76,9 +84,11 @@ window.menu = {
 
     menu.options.forEach((element, index) => {
       if (!element.hidden) {
+        var labelText = element.title || translate.go(element.label);
+        var extraClass = element.customClass ? " " + element.customClass : "";
         if (!!element.tool) {
           tool_options += `
-          <a class="option ${
+          <a class="option${extraClass} ${
             reset && element.id === "settings"
               ? "selected"
               : index === menu.selected
@@ -86,15 +96,15 @@ window.menu = {
               : ""
           }">
             <i class="${element.icon}"></i>
-            <p>${translate.go(element.label)}</p>
+            <p>${labelText}</p>
           </a>`;
         } else {
           menu_options += `
-          <a class="option ${
+          <a class="option${extraClass} ${
             !reset && index === menu.selected ? "selected" : ""
           }">
             <i class="${element.icon}"></i>
-            <p>${translate.go(element.label)}</p>
+            <p>${labelText}</p>
           </a>`;
         }
       }
@@ -293,6 +303,19 @@ window.menu = {
           window[test[0]][test[1]]();
           menu.close();
           main.state = this.previous;
+        } else if (
+          current >= 0 &&
+          menu.options[current] &&
+          menu.options[current].externalUrl
+        ) {
+          var targetUrl = menu.options[current].externalUrl;
+          menu.close();
+          if (
+            window.electronUtilsRender &&
+            typeof window.electronUtilsRender.openExternal === "function"
+          ) {
+            window.electronUtilsRender.openExternal(targetUrl);
+          }
         } else if (
           current >= 0 &&
           menu.options[current] &&

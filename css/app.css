@@ -245,7 +245,27 @@ body.hide-cursor #top-center-dock #dock-handle {
   color: #000000;
 }
 
-body.compact-window .floating-btn .floating-kbd {
+.floating-btn-coffee {
+  padding: 0 clamp(10px, calc(10px * var(--ui-scale, 1)), 15px);
+}
+
+.floating-btn-coffee i {
+  color: #ffdd00;
+}
+
+.floating-btn-coffee:hover {
+  background: rgba(255, 221, 0, 0.14);
+  border-color: rgba(255, 221, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(255, 221, 0, 0.16);
+}
+
+.floating-btn-coffee:hover i {
+  color: #ffe84d;
+}
+
+body.compact-window .floating-btn .floating-kbd,
+body.compact-window .floating-btn-coffee,
+body.compact-window .floating-support-divider {
   display: none !important;
 }
 

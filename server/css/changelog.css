@@ -97,7 +97,9 @@
 
 #changelog-modal .content .footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -106,6 +108,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-width: 120px;
   color: #0b0b0f;
   background: linear-gradient(135deg, #f47521 0%, #ff8a3d 100%);
@@ -117,4 +120,34 @@
   text-align: center;
   cursor: pointer;
   box-shadow: 0 8px 22px rgba(244, 117, 33, 0.35);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+#changelog-modal .content .footer .button.changelog-support-btn {
+  color: #ffffff;
+  background: rgba(255, 221, 0, 0.12);
+  border: 1px solid rgba(255, 221, 0, 0.45);
+  box-shadow: none;
+}
+
+#changelog-modal .content .footer .button.changelog-support-btn i {
+  color: #ffdd00;
+}
+
+#changelog-modal .content .footer .button.changelog-support-btn:hover,
+#changelog-modal .content .footer .button.changelog-support-btn.selected {
+  background: rgba(255, 221, 0, 0.22);
+  border-color: #ffdd00;
+  box-shadow: 0 6px 18px rgba(255, 221, 0, 0.22);
+  transform: translateY(-1px);
+}
+
+#changelog-modal .content .footer .button.changelog-close-btn:hover,
+#changelog-modal .content .footer .button.changelog-close-btn.selected {
+  box-shadow: 0 10px 26px rgba(244, 117, 33, 0.5);
+  transform: translateY(-1px);
 }

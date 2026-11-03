@@ -564,6 +564,8 @@ function createWindow() {
 
   const ALLOWED_EXTERNAL_HOSTS = new Set([
     "github.com",
+    "buymeacoffee.com",
+    "www.buymeacoffee.com",
     "pulkit-mundra-portfolio.vercel.app",
     "www.flaticon.com",
   ]);
@@ -661,11 +663,64 @@ function createWindow() {
       const parsed = new URL(url);
       if (
         parsed.protocol === "https:" &&
-        ALLOWED_EXTERNAL_HOSTS.has(parsed.hostname.toLowerCase()) &&
-        electron.shell &&
-        typeof electron.shell.openExternal === "function"
+        ALLOWED_EXTERNAL_HOSTS.has(parsed.hostname.toLowerCase())
       ) {
-        electron.shell.openExternal(parsed.toString());
+        const targetHref = parsed.toString();
+        if (win && !win.isDestroyed() && !isMiniPlayer) {
+          if (win.isAlwaysOnTop()) {
+            applyAlwaysOnTop(win, false);
+          }
+          if (win.isFullScreen()) {
+            wasFullScreenBeforeMini = false;
+            win.setFullScreen(false);
+            const normalBounds = isValidNormalBounds(savedBounds)
+              ? savedBounds
+              : getCenteredNormalBounds(win, 1280, 720);
+            setTimeout(() => {
+              if (!win.isDestroyed()) {
+                win.setBounds(normalBounds);
+                updateZoom(win);
+              }
+            }, 55);
+          }
+        }
+        const { execFile } = require("child_process");
+        const cleanEnv = Object.assign({}, process.env, { GDK_BACKEND: "x11" });
+        delete cleanEnv.LD_LIBRARY_PATH;
+        const pyLaunch = [
+          "import os, sys, time, gi",
+          "gi.require_version('Gdk', '3.0')",
+          "from gi.repository import Gdk, Gio",
+          "u = sys.argv[1]",
+          "d = Gdk.Display.get_default()",
+          "ctx = d.get_app_launch_context()",
+          "ctx.set_timestamp(int(time.monotonic() * 1000) & 0xFFFFFFFF)",
+          "app = Gio.AppInfo.get_default_for_type('x-scheme-handler/https', False)",
+          "tok = ctx.get_startup_notify_id(app, [])",
+          "d.sync()",
+          "os.environ['DESKTOP_STARTUP_ID'] = tok",
+          "os.environ['XDG_ACTIVATION_TOKEN'] = tok",
+          "app.launch_uris([u], ctx)",
+          "d.sync()",
+        ].join("; ");
+        execFile(
+          "/usr/bin/python3",
+          ["-c", pyLaunch, targetHref],
+          { env: cleanEnv },
+          (err) => {
+            if (err) {
+              execFile("xdg-open", [targetHref], { env: cleanEnv }, (err2) => {
+                if (
+                  err2 &&
+                  electron.shell &&
+                  typeof electron.shell.openExternal === "function"
+                ) {
+                  electron.shell.openExternal(targetHref).catch(() => {});
+                }
+              });
+            }
+          }
+        );
       }
     } catch (_) {}
   });

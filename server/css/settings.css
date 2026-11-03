@@ -301,6 +301,22 @@
   transform: translateY(-2px);
 }
 
+#about-panel .about-link-pill.sponsor-pill {
+  background: linear-gradient(135deg, rgba(255, 221, 0, 0.16), rgba(244, 117, 33, 0.2));
+  border-color: rgba(255, 210, 64, 0.55);
+  color: #ffe58f;
+}
+
+#about-panel .about-link-pill.sponsor-pill i {
+  color: #ffdd00;
+}
+
+#about-panel .about-link-pill.sponsor-pill:hover {
+  background: linear-gradient(135deg, rgba(255, 221, 0, 0.28), rgba(244, 117, 33, 0.32));
+  border-color: #ffdd00;
+  color: #ffffff;
+}
+
 #about-panel .about-shortcuts-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

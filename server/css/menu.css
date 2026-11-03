@@ -102,6 +102,19 @@
   color: #f47521;
 }
 
+#menu-screen .content .tools .option.support-option i {
+  color: #ffdd00;
+}
+
+#menu-screen .content .tools .option.support-option.focus {
+  background: rgba(255, 221, 0, 0.14);
+  border-color: rgba(255, 221, 0, 0.55);
+}
+
+#menu-screen .content .tools .option.support-option.focus i {
+  color: #ffe84d;
+}
+
 #menu-screen .content .options .option:not(.profile).focus::before,
 #menu-screen .content .tools .option.focus::before,
 #menu-screen .content .options .option:not(.profile).selected::before,

@@ -28,6 +28,10 @@ function setupFloatingToolbar() {
     '<button id="btn-pin-top" tabindex="-1" class="floating-btn" title="Smart Auto-PiP Pin on Top (F10 or Ctrl+T)">' +
     '<i class="fa-solid fa-thumbtack"></i><span id="lbl-pin-top">Pin on Top</span><kbd class="floating-kbd">F10</kbd>' +
     "</button>" +
+    '<span class="floating-divider floating-support-divider" aria-hidden="true"></span>' +
+    '<button id="btn-support-coffee" tabindex="-1" class="floating-btn floating-btn-coffee" title="Support the Developer - Buy Me a Coffee">' +
+    '<i class="fa-solid fa-mug-hot"></i>' +
+    "</button>" +
     "</div>";
   document.body.appendChild(dock);
 
@@ -750,6 +754,23 @@ function setupFloatingToolbar() {
       window.electronUtilsRender.toggleAlwaysOnTop().then(renderState);
     }
   });
+
+  var btnSupportCoffee = document.getElementById("btn-support-coffee");
+  if (btnSupportCoffee) {
+    btnSupportCoffee.addEventListener("click", function (e) {
+      e.stopPropagation();
+      this.blur();
+      dock.classList.remove("expanded");
+      if (
+        window.electronUtilsRender &&
+        typeof window.electronUtilsRender.openExternal === "function"
+      ) {
+        window.electronUtilsRender.openExternal(
+          "https://buymeacoffee.com/pulkitmundra"
+        );
+      }
+    });
+  }
 
   if (window.electronUtilsRender && window.electronUtilsRender.onWindowModeChanged) {
     window.electronUtilsRender.onWindowModeChanged(renderState);
@@ -1858,7 +1879,22 @@ function setupMouseSupport() {
 
     // 2. Changelog modal (#changelog-modal)
     if (typeof changelog !== "undefined" && document.getElementById(changelog.id)) {
-      if (target.closest("#changelog-modal .button") || !target.closest("#changelog-modal .content")) {
+      if (target.closest("#changelog-support-btn")) {
+        if (
+          window.electronUtilsRender &&
+          typeof window.electronUtilsRender.openExternal === "function"
+        ) {
+          window.electronUtilsRender.openExternal(
+            "https://buymeacoffee.com/pulkitmundra"
+          );
+        }
+        return;
+      }
+      if (
+        target.closest("#changelog-close-btn") ||
+        target.closest("#changelog-modal .button") ||
+        !target.closest("#changelog-modal .content")
+      ) {
         changelog.destroy();
       }
       return;

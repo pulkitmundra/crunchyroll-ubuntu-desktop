@@ -630,6 +630,14 @@ window.settings = {
               <span>Built &amp; Maintained by <strong>Pulkit Mundra</strong></span>
             </div>
             <div class="about-links">
+              <a class="about-link-pill sponsor-pill" data-external-url="https://buymeacoffee.com/pulkitmundra">
+                <i class="fa-solid fa-mug-hot"></i>
+                <span>Buy Me a Coffee</span>
+              </a>
+              <a class="about-link-pill" data-external-url="https://github.com/sponsors/pulkitmundra">
+                <i class="fa-solid fa-heart"></i>
+                <span>Sponsor on GitHub</span>
+              </a>
               <a class="about-link-pill" data-external-url="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop">
                 <i class="fa-solid fa-code-branch"></i>
                 <span>github.com/pulkitmundra/crunchyroll-ubuntu-desktop</span>

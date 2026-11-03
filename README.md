@@ -20,8 +20,11 @@ $ crunchyroll --ozone-platform=x11
 
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/stargazers"><img src="https://img.shields.io/github/stars/pulkitmundra/crunchyroll-ubuntu-desktop?style=social" alt="GitHub Stars" /></a>&nbsp;
+  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.1.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
   <a href="https://github.com/pulkitmundra"><img src="https://img.shields.io/badge/Maintainer-%40pulkitmundra-181717?style=flat&logo=github" alt="Maintainer" /></a>&nbsp;
-  <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>
+  <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>&nbsp;
+  <a href="https://buymeacoffee.com/pulkitmundra"><img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>&nbsp;
+  <a href="https://github.com/sponsors/pulkitmundra"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EA4AAA?style=flat&logo=github-sponsors&logoColor=white" alt="GitHub Sponsors" /></a>
 </p>
 
 <p align="center">
@@ -147,7 +150,14 @@ flowchart LR
 
 Because Crunchyroll streams are encrypted with **Google Widevine DRM**, standard stock Electron binaries cannot play videos. This app runs inside the **Castlabs Electron for Content Security (ECS)** runtime (which includes Widevine CDM verification).
 
-### One-Command Setup
+### Option 1: Install from Ubuntu App Center / Snap Store (Recommended)
+
+```bash
+sudo snap install crunchyroll-ubuntu-desktop
+```
+*(Or open the **Ubuntu App Center** and search for **`crunchyroll-ubuntu-desktop`** / **`Crunchyroll Desktop (Unofficial)`**)*
+
+### Option 2: Live-Editable Source Setup (`./install.sh`)
 
 ```bash
 git clone https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop.git ~/Desktop/prsnl/crunchyroll-ubuntu-desktop
@@ -172,7 +182,9 @@ chmod +x install.sh
 - **GNOME Application Grid**: Search for **Crunchyroll**
 - **Terminal**:
   ```bash
-  crunchyroll
+  crunchyroll-ubuntu-desktop   # If installed via Snap Store
+  # or
+  crunchyroll                  # If installed via ./install.sh
   ```
 
 ---
@@ -189,8 +201,9 @@ chmod +x install.sh
 | **Seek `5s` / `10s`** | Click/drag timeline or scroll wheel on bar | `Left` / `Right` (`5s`), `J` / `L` (`10s`) |
 | **Volume / Mute** | Click/drag `#osd-volume` pill or wheel | `Up` / `Down` Arrow, `M` (Mute) |
 | **Playback Speed (`0.25x` - `2x`)** | Click **Speed** (`fa-gauge-high`) in OSD | `[` (Slower) / `]` (Faster) |
+| **Capture Video Frame** | Click **Camera** (`fa-camera`) in OSD | `Ctrl + Shift + S` |
 | **Skip Recap / Intro / Credits** | Click **Skip** pill (click elsewhere to abort auto-skip) | `S` or `Enter` |
-| **In-Player Episodes Drawer** | Click **Episodes** in OSD | `E` |
+| **In-Player Episodes Drawer** | Click **Episodes** in OSD (`<` / `>` for seasons) | `E` |
 | **Audio & Subtitles Drawer** | Click **Audio & Subtitles** in OSD | `C` |
 | **Next Episode / Aspect Ratio** | Click **Next** / **Expand** in OSD | `N` (Next) / `Z` (Aspect Ratio) |
 | **Open Sidebar Menu** | Hover left edge or click **Menu** in top dock | `Left` Arrow from screen edge |
@@ -206,13 +219,16 @@ chmod +x install.sh
 
 ```text
 crunchyroll-ubuntu-desktop/
-├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen IPC)
+├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen & screenshot IPC)
 ├── preload.js                    # Electron preload bridge (pointer/hover telemetry & window IPC)
 ├── index.html                    # Outer Electron shell
-├── package.json                  # Package metadata (v2.0.0)
+├── package.json                  # Package metadata (v2.1.0)
 ├── install.sh                    # Automated installer (downloads Castlabs Widevine runtime & links repo)
 ├── CHANGELOG.md                  # Full release history & audit changelog
 ├── LICENSE                       # ISC License
+├── snap/
+│   ├── snapcraft.yaml            # Canonical Snap Store / Ubuntu App Center packaging config
+│   └── gui/                      # Snap desktop launcher entry
 ├── bin/
 │   ├── crunchyroll               # CLI launcher script (~/.local/bin/crunchyroll)
 │   └── crunchyroll-linux.desktop # Desktop entry template (~/.local/share/applications/)
@@ -234,11 +250,19 @@ crunchyroll-ubuntu-desktop/
 ---
 
 <a id="author"></a>
-## 👨🏻‍💻 Author & Contact
+## 👨🏻‍💻 Author, Support & Contact
 
 Built and maintained by **Pulkit Mundra** (Senior Software Developer - SDE-3). Issues, feature requests, and pull requests are welcome!
 
+If this desktop app makes watching anime on Ubuntu/Linux better for you, consider buying me a coffee or sponsoring the project:
+
 <p align="left">
+  <a href="https://buymeacoffee.com/pulkitmundra">
+    <img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" />
+  </a>
+  <a href="https://github.com/sponsors/pulkitmundra">
+    <img src="https://img.shields.io/badge/Sponsor_on_GitHub-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="Sponsor on GitHub" />
+  </a>
   <a href="https://pulkit-mundra-portfolio.vercel.app">
     <img src="https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Portfolio" />
   </a>
@@ -263,5 +287,5 @@ Built and maintained by **Pulkit Mundra** (Senior Software Developer - SDE-3). I
 ---
 
 <p align="center">
-  <b>If you enjoy watching Crunchyroll on Ubuntu with this desktop client, please consider giving the repo a ⭐!</b>
+  <b>If you enjoy watching Crunchyroll on Ubuntu with this desktop client, please consider giving the repo a ⭐ or <a href="https://buymeacoffee.com/pulkitmundra">buying me a coffee ☕</a>!</b>
 </p>
