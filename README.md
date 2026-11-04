@@ -36,6 +36,10 @@ $ crunchyroll --ozone-platform=x11
   <a href="#author">Author</a>
 </p>
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="Crunchyroll Ubuntu Desktop Screenshot" width="900" />
+</p>
+
 > [!NOTE]
 > **Disclaimer**: This project is an unofficial, community-maintained desktop client and is **not** affiliated with, endorsed by, or associated with Crunchyroll or Sony Pictures Entertainment. A valid Crunchyroll account is required to stream content.
 
