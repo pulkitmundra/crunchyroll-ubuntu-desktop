@@ -9,6 +9,7 @@ on:
       - "CHANGELOG.md"
       - "LICENSE"
       - ".github/FUNDING.yml"
+      - "assets/**"
   release:
     types: [published]
   workflow_dispatch:
@@ -175,6 +176,17 @@ jobs:
 
           raw = os.environ["SNAPCRAFT_STORE_CREDENTIALS"].strip()
           u1 = cs_creds.unmarshal_u1_credentials(raw).model_dump(by_alias=True)
+
+          # Refresh short-lived Ubuntu One discharge macaroon before calling Snap Store APIs
+          ref = requests.post(
+              "https://login.ubuntu.com/api/v2/tokens/refresh",
+              json={"discharge_macaroon": u1["d"]},
+              headers={"Content-Type": "application/json", "Accept": "application/json"},
+              timeout=30,
+          )
+          if ref.ok and "discharge_macaroon" in ref.json():
+              u1["d"] = ref.json()["discharge_macaroon"]
+
           root_m = Macaroon.deserialize(u1["r"])
           discharge_m = Macaroon.deserialize(u1["d"])
           bound = root_m.prepare_for_request(discharge_m).serialize()
