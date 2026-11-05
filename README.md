@@ -276,7 +276,7 @@ Many older Electron wrappers fail on Crunchyroll with `SHAK-6002` DRM errors or 
 | Project | Description | Links |
 | :--- | :--- | :--- |
 | **[NVR Command Center](https://github.com/pulkitmundra/nvr-command-center)** | Ultra-low-latency GPU RTSP IP Camera, CCTV, NVR/DVR/XVR & Cloud P2P Surveillance Viewer for Linux/Ubuntu in Native Rust (Dahua SmartPSS/DMSS, CP Plus KVMS/gCMOB, Hikvision iVMS-4200, Amcrest, ONVIF) | [GitHub](https://github.com/pulkitmundra/nvr-command-center) · [Snap Store](https://snapcraft.io/nvr-command-center) |
-| **[Galaxy Buds Ubuntu Switcher](https://github.com/pulkitmundra/galaxy-buds-ubuntu)** | Universal Samsung Galaxy Buds (`Buds3 Pro`, `Buds2 Pro`, `Buds FE`, `Buds2`, `Buds Pro`, `Buds Live`, `Buds+`) GNOME 45-48 Quick Settings Switcher, Live Battery %, A2DP/HFP Toggle & Android Call Auto-Handoff | [GitHub](https://github.com/pulkitmundra/galaxy-buds-ubuntu) |
+| **[Galaxy Buds Ubuntu Switcher](https://github.com/pulkitmundra/galaxy-buds-ubuntu)** | Universal Samsung Galaxy Buds (`Buds3 Pro`, `Buds2 Pro`, `Buds FE`, `Buds2`, `Buds Pro`, `Buds Live`, `Buds+`) GNOME 45-48 Quick Settings Switcher, Live Battery %, A2DP/HFP Toggle & Android Call Auto-Handoff | [GitHub](https://github.com/pulkitmundra/galaxy-buds-ubuntu) · [GNOME Extensions](https://extensions.gnome.org/extension/11611/samsung-galaxy-buds-quick-settings-switcher/) |
 
 ---
 
