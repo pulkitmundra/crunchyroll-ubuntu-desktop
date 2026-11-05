@@ -161,6 +161,44 @@ window.home_episodes = {
     });
   },
 
+  refreshEpisodeCard: function (epIndex, btnEl) {
+    if (
+      !home_episodes.data ||
+      !Array.isArray(home_episodes.data.episodes) ||
+      !home_episodes.data.episodes[epIndex]
+    ) {
+      return;
+    }
+    var ep = home_episodes.data.episodes[epIndex];
+    var durMin = ep.duration && ep.duration > 0 ? ep.duration : 24;
+    var nowWatched = Boolean(ep.playhead && ep.playhead >= durMin);
+    var cardEl =
+      (btnEl && btnEl.closest && btnEl.closest(".episode")) ||
+      document.querySelector(`.episodes-list .episode[data-ep-index="${epIndex}"]`);
+    if (!cardEl) return;
+    var imgWrap = cardEl.querySelector(".episode-image");
+    if (imgWrap) {
+      var oldProg = imgWrap.querySelector(".progress");
+      if (oldProg && oldProg.parentNode) {
+        oldProg.parentNode.removeChild(oldProg);
+      }
+      var newProgHtml = home_episodes.view(ep);
+      if (newProgHtml) {
+        imgWrap.insertAdjacentHTML("beforeend", newProgHtml);
+      }
+    }
+    var toggleBtn = cardEl.querySelector(".episode-watched-toggle");
+    if (toggleBtn) {
+      toggleBtn.classList.toggle("watched", nowWatched);
+      toggleBtn.title = nowWatched ? "Mark as Unwatched" : "Mark as Watched";
+      toggleBtn.innerHTML = `<i class="fa-${
+        nowWatched ? "solid" : "regular"
+      } fa-circle-check"></i><span>${
+        nowWatched ? "Watched" : "Mark Watched"
+      }</span>`;
+    }
+  },
+
   toggleEpisodeWatched: function (epIndex, btnEl) {
     if (
       !home_episodes.data ||
@@ -182,32 +220,7 @@ window.home_episodes = {
       },
       success: function () {
         ep.playhead = nowWatched ? durMin : 0;
-        var cardEl =
-          (btnEl && btnEl.closest && btnEl.closest(".episode")) ||
-          document.querySelector(`.episodes-list .episode[data-ep-index="${epIndex}"]`);
-        if (cardEl) {
-          var imgWrap = cardEl.querySelector(".episode-image");
-          if (imgWrap) {
-            var oldProg = imgWrap.querySelector(".progress");
-            if (oldProg && oldProg.parentNode) {
-              oldProg.parentNode.removeChild(oldProg);
-            }
-            var newProgHtml = home_episodes.view(ep);
-            if (newProgHtml) {
-              imgWrap.insertAdjacentHTML("beforeend", newProgHtml);
-            }
-          }
-          var toggleBtn = cardEl.querySelector(".episode-watched-toggle");
-          if (toggleBtn) {
-            toggleBtn.classList.toggle("watched", nowWatched);
-            toggleBtn.title = nowWatched ? "Mark as Unwatched" : "Mark as Watched";
-            toggleBtn.innerHTML = `<i class="fa-${
-              nowWatched ? "solid" : "regular"
-            } fa-circle-check"></i><span>${
-              nowWatched ? "Watched" : "Mark Watched"
-            }</span>`;
-          }
-        }
+        home_episodes.refreshEpisodeCard(epIndex, btnEl);
         if (typeof window.showToast === "function") {
           var epLabel =
             (ep.episode_number ? "E" + ep.episode_number + " - " : "") +

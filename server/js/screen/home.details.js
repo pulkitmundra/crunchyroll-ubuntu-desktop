@@ -36,6 +36,9 @@ window.home_details = {
     }
     if (metaRow && typeof mapper !== "undefined" && mapper.formatMetaBadges) {
       metaRow.innerHTML = mapper.formatMetaBadges(item);
+      if (typeof mapper.triggerHeroEnrichment === "function") {
+        mapper.triggerHeroEnrichment(item, "hero-meta-row", 0);
+      }
     }
 
     // Fetch live seriesInfo so star rating, Sub/Dub, maturity, and episode counts are always shown
@@ -46,13 +49,27 @@ window.home_details = {
           if (res && res.data && res.data[0] && typeof mapper !== "undefined") {
             var enriched = mapper.extractMeta(res.data[0]);
             Object.keys(enriched).forEach(function (k) {
-              if (enriched[k] && (!item[k] || (Array.isArray(enriched[k]) && enriched[k].length))) {
-                item[k] = enriched[k];
+              var val = enriched[k];
+              if (Array.isArray(val)) {
+                if (val.length > 0) item[k] = val;
+              } else if (val !== null && val !== undefined && val !== "" && val !== 0) {
+                item[k] = val;
               }
             });
+            if (typeof mapper.applyCachedAiringInfo === "function") {
+              mapper.applyCachedAiringInfo(item);
+            }
             var mRow = document.getElementById("hero-meta-row");
-            if (mRow) {
+            if (
+              mRow &&
+              home_details.data &&
+              home_details.data.this &&
+              home_details.data.this.id === item.id
+            ) {
               mRow.innerHTML = mapper.formatMetaBadges(item);
+              if (typeof mapper.triggerHeroEnrichment === "function") {
+                mapper.triggerHeroEnrichment(item, "hero-meta-row", 0);
+              }
             }
           }
         },

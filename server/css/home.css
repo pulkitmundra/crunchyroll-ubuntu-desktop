@@ -1047,6 +1047,91 @@ body.compact-window .browse-back {
   font-size: 0.84rem;
 }
 
+.cr-badge.cr-status-ongoing {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  color: #6ee7b7;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.cr-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.9);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: cr-status-pulse 2s infinite ease-in-out;
+}
+
+@keyframes cr-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+}
+
+.cr-badge.cr-status-completed {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #7dd3fc;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.cr-badge.cr-status-completed i {
+  font-size: 0.82rem;
+  color: #38bdf8;
+}
+
+.cr-badge.cr-status-upcoming {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(192, 132, 252, 0.48);
+  color: #d8b4fe;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.cr-badge.cr-airing-schedule {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  color: #a7f3d0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-badge.cr-airing-schedule i {
+  color: #34d399;
+  font-size: 0.8rem;
+}
+
+.cr-badge.cr-finale-info {
+  background: rgba(244, 117, 33, 0.14);
+  border: 1px solid rgba(244, 117, 33, 0.44);
+  color: #fed7aa;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cr-badge.cr-finale-info i {
+  color: #fb923c;
+  font-size: 0.78rem;
+}
+
 .cr-badge.cr-subdub {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -1061,6 +1146,15 @@ body.compact-window .browse-back {
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: #e2e8f0;
   font-size: 0.8rem;
+}
+
+.cr-badge.cr-year {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .cr-badge.cr-counts {
@@ -1093,8 +1187,16 @@ body.compact-window .browse-back {
   pointer-events: none;
 }
 
+.cr-card-badges-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
 .cr-card-rating,
-.cr-card-subdub {
+.cr-card-subdub,
+.cr-card-ongoing {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1119,8 +1221,21 @@ body.compact-window .browse-back {
   font-size: 10px;
 }
 
+.cr-card-ongoing {
+  background: rgba(10, 26, 20, 0.88);
+  border: 1px solid rgba(52, 211, 153, 0.6);
+  color: #6ee7b7;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  padding: 3px 6px;
+}
+
+.cr-card-ongoing .cr-status-dot {
+  width: 5.5px;
+  height: 5.5px;
+}
+
 .cr-card-subdub {
-  margin-left: auto;
   background: rgba(14, 14, 18, 0.86);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #fff;

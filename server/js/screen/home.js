@@ -12,7 +12,8 @@ window.home = {
   init: function () {
     $("[id='home-screen']").remove();
     home.position = 0;
-    home._previewItem = null;
+    home._previewItem =
+      (home.data && home.data.main && home.data.main.banner) || null;
     var home_element = document.createElement("div");
     home_element.id = home.id;
 
@@ -127,6 +128,15 @@ window.home = {
     }
 
     main.state = home.id;
+    if (
+      home.data &&
+      home.data.main &&
+      home.data.main.banner &&
+      typeof mapper !== "undefined" &&
+      typeof mapper.triggerHeroEnrichment === "function"
+    ) {
+      mapper.triggerHeroEnrichment(home.data.main.banner, "hero-meta-row", 120);
+    }
     changelog.init();
   },
 
@@ -137,18 +147,22 @@ window.home = {
   },
 
   show_details: function () {
-    home._previewItem = null;
     var rowEl = $(`#${home.id} .row-content`)[home.position - 1];
     var item =
       home.position > 0 &&
+      home.data &&
+      home.data.main &&
+      home.data.main.lists &&
       home.data.main.lists[home.position - 1] &&
       rowEl &&
       rowEl.slick
         ? home.data.main.lists[home.position - 1].items[
             rowEl.slick.currentSlide
           ]
-        : home.data.main.banner;
+        : home._previewItem ||
+          (home.data && home.data.main && home.data.main.banner);
     if (!item) return;
+    home._previewItem = item;
     $(`#${home.id} .details .background img`).attr("src", item.background);
     var title = $(`#${home.id} .details .info .title`)[0];
     if (title) {
@@ -158,6 +172,9 @@ window.home = {
     var metaRow = document.querySelector(`#${home.id} #hero-meta-row`) || document.getElementById("hero-meta-row");
     if (metaRow && typeof mapper !== "undefined" && mapper.formatMetaBadges) {
       metaRow.innerHTML = mapper.formatMetaBadges(item);
+      if (typeof mapper.triggerHeroEnrichment === "function") {
+        mapper.triggerHeroEnrichment(item, "hero-meta-row", 200);
+      }
     }
 
     var description = $(`#${home.id} .details .info .description`)[0];
@@ -460,16 +477,23 @@ window.home = {
         : function (s) {
             return String(s == null ? "" : s);
           };
+    var isCompleted = Boolean(
+      item.duration && item.playhead && item.playhead >= item.duration
+    );
     var remMin =
       item.duration && item.playhead
         ? Math.max(1, Math.round(item.duration - item.playhead))
         : 0;
-    var playhead = item.playhead
-      ? `<div class="progress" style="width: ${Math.min(
-          100,
-          (item.playhead * 100) / item.duration
-        )}%" value="${remMin}m"></div>`
-      : "";
+    var progressLabel = isCompleted
+      ? esc(translate.go("home.episodes.watched"))
+      : remMin + "m";
+    var playhead =
+      item.playhead && item.duration
+        ? `<div class="progress" style="width: ${Math.max(
+            0,
+            Math.min(100, (item.playhead * 100) / item.duration)
+          )}%" value="${progressLabel}"></div>`
+        : "";
     var badges =
       typeof mapper !== "undefined" && mapper.formatCardBadges
         ? mapper.formatCardBadges(item)

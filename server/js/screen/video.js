@@ -8,6 +8,32 @@ window.video = {
     active: 1,
     state: false,
   },
+  quality: {
+    options: [
+      { key: "auto", label: "Auto" },
+      { key: "1080", label: "1080p" },
+      { key: "720", label: "720p" },
+      { key: "480", label: "480p" },
+      { key: "360", label: "360p" },
+      { key: "240", label: "240p" },
+    ],
+    state: false,
+  },
+  sleep: {
+    options: [
+      { key: "off", label: "Off", episodes: 0, minutes: 0 },
+      { key: "1ep", label: "This Ep", episodes: 1, minutes: 0 },
+      { key: "2ep", label: "2 Eps", episodes: 2, minutes: 0 },
+      { key: "3ep", label: "3 Eps", episodes: 3, minutes: 0 },
+      { key: "30m", label: "30m", episodes: 0, minutes: 30 },
+      { key: "60m", label: "60m", episodes: 0, minutes: 60 },
+    ],
+    active: "off",
+    episodesLeft: 0,
+    endsAt: 0,
+    timerId: null,
+    state: false,
+  },
   next: {
     shown: false,
     state: false,
@@ -16,6 +42,12 @@ window.video = {
   },
   option: false,
   options: [
+    {
+      icon: "fa-solid fa-backward-step",
+      action: "prevEpisode",
+      param: true,
+      label: "Previous Episode (P)",
+    },
     {
       icon: "fa-solid fa-forward-step",
       action: "nextEpisode",
@@ -28,10 +60,22 @@ window.video = {
       label: "Episodes (E)",
     },
     {
+      icon: "fa-solid fa-sliders video-quality",
+      action: "videoQuality",
+      param: true,
+      label: "Video Quality (Q)",
+    },
+    {
       icon: "fa-solid fa-gauge-high playback-speed",
       action: "playbackSpeed",
       param: true,
       label: "Playback Speed ([ / ])",
+    },
+    {
+      icon: "fa-solid fa-moon sleep-timer",
+      action: "sleepTimer",
+      param: true,
+      label: "Sleep Timer / Auto-Pause (T)",
     },
     {
       icon: "fa-solid fa-message",
@@ -221,9 +265,11 @@ window.video = {
         video.nextEpisode(true);
       });
       safeSetHandler("previoustrack", function () {
-        if (typeof player !== "undefined" && player.getPlayed() > 10) {
+        if (typeof player !== "undefined" && player.getPlayed() > 15) {
           player.forwardTo(0);
           video.setPlayingTime();
+        } else {
+          video.prevEpisode(true);
         }
       });
       video.syncMediaSessionPosition();
@@ -288,11 +334,12 @@ window.video = {
     if (video.episodesDrawer && video.episodesDrawer.open) {
       video.closeEpisodes(false);
     }
-    video.hideOSD();
     video.settings.open = true;
+    video.hideOSD();
     player.pause();
     $("#osd-icon").hide();
     $(".player-settings").hide();
+    document.body.classList.remove("hide-cursor");
     video.setAudios();
     video.setSubtitles();
     $(".settings-slide").addClass("open");
@@ -508,8 +555,8 @@ window.video = {
       video.settings.open = false;
       $(".settings-slide").removeClass("open");
     }
-    video.hideOSD();
     video.episodesDrawer.open = true;
+    video.hideOSD();
     player.pause();
     $("#osd-icon").hide();
     $(".player-settings").hide();
@@ -521,13 +568,18 @@ window.video = {
     $("#player-episodes-season").text(
       item.season_number ? "Season " + item.season_number : "Current Season"
     );
+    var hasCurrentEpInDrawer = Boolean(
+      video.episodesDrawer.list &&
+        video.episodesDrawer.list.length > 0 &&
+        video.episodesDrawer.list.some(video.isEpisodeMatch)
+    );
+    if (!hasCurrentEpInDrawer) {
+      video.episodesDrawer.seasonId = item.season_id || null;
+      video.episodesDrawer.seasonIndex = -1;
+    }
     video.ensureDrawerSeasons();
 
-    if (
-      video.episodesDrawer.list &&
-      video.episodesDrawer.list.length > 0 &&
-      video.episodesDrawer.list.some(video.isEpisodeMatch)
-    ) {
+    if (hasCurrentEpInDrawer) {
       video.renderEpisodesDrawer();
       return;
     }
@@ -570,6 +622,17 @@ window.video = {
     var loadBySeasonId = function (seasonId) {
       if (!seasonId) return;
       video.episodesDrawer.seasonId = seasonId;
+      if (
+        video.episodesDrawer.seasons &&
+        video.episodesDrawer.seasons.length > 0
+      ) {
+        var matchedIdx = video.episodesDrawer.seasons.findIndex(function (s) {
+          return s.id === seasonId;
+        });
+        if (matchedIdx >= 0) {
+          video.episodesDrawer.seasonIndex = matchedIdx;
+        }
+      }
       video.updateDrawerSeasonNav();
       service.episodes({
         data: { id: seasonId },
@@ -722,6 +785,53 @@ window.video = {
     }, 60);
   },
 
+  syncCurrentPlayheadToLists: function (playedMin) {
+    var mins =
+      typeof playedMin === "number" && !isNaN(playedMin)
+        ? Math.max(0, playedMin)
+        : typeof player !== "undefined"
+        ? Math.max(0, player.getPlayed() / 60)
+        : 0;
+    if (video.episodesDrawer && Array.isArray(video.episodesDrawer.list)) {
+      for (var d = 0; d < video.episodesDrawer.list.length; d++) {
+        if (video.isEpisodeMatch(video.episodesDrawer.list[d])) {
+          video.episodesDrawer.list[d].playhead = mins;
+        }
+      }
+    }
+    if (
+      typeof home_episodes !== "undefined" &&
+      home_episodes.data &&
+      Array.isArray(home_episodes.data.episodes)
+    ) {
+      for (var k = 0; k < home_episodes.data.episodes.length; k++) {
+        if (video.isEpisodeMatch(home_episodes.data.episodes[k])) {
+          home_episodes.data.episodes[k].playhead = mins;
+          if (typeof home_episodes.refreshEpisodeCard === "function") {
+            home_episodes.refreshEpisodeCard(k);
+          }
+        }
+      }
+    }
+  },
+
+  syncHomeEpisodesSlide: function () {
+    if (
+      typeof home_episodes !== "undefined" &&
+      home_episodes.data &&
+      Array.isArray(home_episodes.data.episodes) &&
+      $(".episodes .episodes-list")[0] &&
+      $(".episodes .episodes-list")[0].slick
+    ) {
+      var homeEpIdx = home_episodes.data.episodes.findIndex(function (he) {
+        return video.isEpisodeMatch(he);
+      });
+      if (homeEpIdx >= 0) {
+        $(".episodes .episodes-list")[0].slick.currentSlide = homeEpIdx;
+      }
+    }
+  },
+
   playEpisodeFromDrawer: function (index) {
     var list = video.episodesDrawer.list || [];
     var ep = list[index];
@@ -731,33 +841,27 @@ window.video = {
       player.resume();
       return;
     }
-    var curPlayedMin = player.getPlayed() / 60;
-    for (var k = 0; k < list.length; k++) {
-      if (video.isEpisodeMatch(list[k])) {
-        list[k].playhead = curPlayedMin;
-      }
-    }
+    video.syncCurrentPlayheadToLists(player.getPlayed() / 60);
     video.saveHistory();
-    if (
-      typeof home_episodes !== "undefined" &&
-      $(".episodes .episodes-list")[0] &&
-      $(".episodes .episodes-list")[0].slick
-    ) {
-      $(".episodes .episodes-list")[0].slick.currentSlide = index;
-    }
     video.currentItem = Object.assign({}, video.currentItem || {}, ep);
     video.play(video.currentItem);
-    $(".osd #title").text(video.currentItem.serie || "");
-    $(".osd #subtitle").text(
-      `${video.currentItem.season_number}x${video.currentItem.episode_number} - ${video.currentItem.episode || video.currentItem.title || ""}`
-    );
+    video.syncHomeEpisodesSlide();
+    $(".osd #title").text(video.currentItem.serie || video.currentItem.title || "");
+    var epSub =
+      video.currentItem.season_number !== undefined &&
+      video.currentItem.episode_number !== undefined
+        ? `${video.currentItem.season_number}x${video.currentItem.episode_number} - ${
+            video.currentItem.episode || video.currentItem.title || ""
+          }`
+        : video.currentItem.episode || video.currentItem.title || "";
+    $(".osd #subtitle").text(epSub);
   },
 
   getSettings: function () {
     return video.options
       .map(
         (element) =>
-          `<i class="${element.icon}" data-tooltip="${element.label || ""}"></i>`
+          `<i class="${element.icon}" data-tooltip="${element.label || ""}"><span class="setting-badge"></span></i>`
       )
       .join("");
   },
@@ -792,6 +896,7 @@ window.video = {
     clearInterval(video.timers.next);
     clearInterval(video.timers.history.object);
     video.clearAutoSkip(true);
+    video.clearSleepCountdown();
     $("[id='video-screen']").remove();
     video.settings.open = false;
     video.episodesDrawer.open = false;
@@ -801,6 +906,9 @@ window.video = {
     video.episodesDrawer.seasonIndex = -1;
     video.episodesDrawer.seriesId = null;
     video.speed.state = false;
+    video.quality.state = false;
+    video.sleep.state = false;
+    video._chaptersDirty = true;
     video.option = false;
     video.currentItem = Object.assign({}, item);
     if (typeof menu !== "undefined" && menu.isOpen) {
@@ -841,6 +949,7 @@ window.video = {
         <div class="progress">
           <div id="time">00:00:00</div>
           <div class="bar">
+            <div id="chapter-markers"></div>
             <div id="seek-hover"></div>
             <div id="played">
               <div class="preview">
@@ -913,6 +1022,8 @@ window.video = {
       player.applySubtitlePrefs();
     }
     video.syncVolumeUI();
+    video.syncQualityUI();
+    video.syncSleepUI();
 
     $(`#${home.id}`).hide();
     if (main.state !== video.id) {
@@ -922,17 +1033,25 @@ window.video = {
   },
 
   destroy: function () {
+    video._playReqId = (video._playReqId || 0) + 1;
     document.body.classList.remove(
       "scrubbing-progress",
       "scrubbing-volume",
       "capturing-screenshot"
     );
     video.clearAutoSkip(true);
+    video.clearSleepCountdown();
     video.clearMediaSession();
     video.hideOSD();
     document.body.classList.remove("hide-cursor");
     if (video.episode && typeof player !== "undefined" && player.getPlayed() > 0) {
-      video.saveHistory();
+      var playedSec = player.getPlayed();
+      var durSec = player.getDuration() || 0;
+      var isNearEnd = durSec > 0 && playedSec >= durSec - 2;
+      video.syncCurrentPlayheadToLists(
+        isNearEnd ? Math.round(durSec / 60) : playedSec / 60
+      );
+      video.saveHistory(isNearEnd ? Math.floor(durSec) : undefined);
     }
     player.stop();
     clearTimeout(video.timers.osd.object);
@@ -959,6 +1078,8 @@ window.video = {
     video.streams = [];
     video.speed.state = false;
     video.speed.active = 1;
+    video.quality.state = false;
+    video.sleep.state = false;
     video.settings.open = false;
     video.option = false;
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
@@ -1019,6 +1140,12 @@ window.video = {
             video.stopNext();
           } else if (video.speed.state) {
             video.hidePlaySpeed();
+            video.showOSD();
+          } else if (video.quality && video.quality.state) {
+            video.hideVideoQuality();
+            video.showOSD();
+          } else if (video.sleep && video.sleep.state) {
+            video.hideSleepTimer();
             video.showOSD();
           } else {
             video.destroy();
@@ -1086,6 +1213,14 @@ window.video = {
           osd = false;
           video.hidePlaySpeed();
           video.showOSD();
+        } else if (video.quality && video.quality.state) {
+          osd = false;
+          video.hideVideoQuality();
+          video.showOSD();
+        } else if (video.sleep && video.sleep.state) {
+          osd = false;
+          video.hideSleepTimer();
+          video.showOSD();
         } else if (
           video.option &&
           document.getElementById("osd") &&
@@ -1119,18 +1254,25 @@ window.video = {
         if (video.episodesDrawer && video.episodesDrawer.open) {
           osd = false;
           video.switchDrawerSeason(-1);
+        } else if (video.speed && video.speed.state) {
+          osd = false;
+          video.setSpeed(-1);
+          video.showOSD(true);
+        } else if (video.quality && video.quality.state) {
+          osd = false;
+          video.setQuality(-1);
+          video.showOSD(true);
+        } else if (video.sleep && video.sleep.state) {
+          osd = false;
+          video.setSleepTimer(-1);
+          video.showOSD(true);
         } else if (video.option) {
-          if (video.speed.state) {
-            osd = false;
-            video.setSpeed(-1);
-          } else {
-            var options = $("#setting-options i");
-            var selected = options.index($("#setting-options i.selected"));
-            options.removeClass("selected");
-            options
-              .eq(selected > 0 ? selected - 1 : selected)
-              .addClass("selected");
-          }
+          var options = $("#setting-options i");
+          var selected = options.index($("#setting-options i.selected"));
+          options.removeClass("selected");
+          options
+            .eq(selected > 0 ? selected - 1 : selected)
+            .addClass("selected");
         } else if (!drawerOpen) {
           if (video.isAutoSkipping()) video.abortAutoSkip();
           player.rewind(video.setPlayingTime);
@@ -1141,18 +1283,25 @@ window.video = {
         if (video.episodesDrawer && video.episodesDrawer.open) {
           osd = false;
           video.switchDrawerSeason(1);
+        } else if (video.speed && video.speed.state) {
+          osd = false;
+          video.setSpeed(1);
+          video.showOSD(true);
+        } else if (video.quality && video.quality.state) {
+          osd = false;
+          video.setQuality(1);
+          video.showOSD(true);
+        } else if (video.sleep && video.sleep.state) {
+          osd = false;
+          video.setSleepTimer(1);
+          video.showOSD(true);
         } else if (video.option) {
-          if (video.speed.state) {
-            osd = false;
-            video.setSpeed(1);
-          } else {
-            var options = $("#setting-options i");
-            var selected = options.index($("#setting-options i.selected"));
-            options.removeClass("selected");
-            options
-              .eq(selected < video.options.length - 1 ? selected + 1 : selected)
-              .addClass("selected");
-          }
+          var options = $("#setting-options i");
+          var selected = options.index($("#setting-options i.selected"));
+          options.removeClass("selected");
+          options
+            .eq(selected < video.options.length - 1 ? selected + 1 : selected)
+            .addClass("selected");
         } else if (!drawerOpen) {
           if (video.isAutoSkipping()) video.abortAutoSkip();
           player.forward(video.setPlayingTime);
@@ -1217,6 +1366,12 @@ window.video = {
         } else if (video.speed.state) {
           video.hidePlaySpeed();
           video.showOSD();
+        } else if (video.quality && video.quality.state) {
+          video.hideVideoQuality();
+          video.showOSD();
+        } else if (video.sleep && video.sleep.state) {
+          video.hideSleepTimer();
+          video.showOSD();
         } else if (video.option) {
           video.option = false;
           $("#setting-options").children().removeClass("selected");
@@ -1250,11 +1405,26 @@ window.video = {
           osd = false;
         }
         break;
+      case 81: // Q: Video Quality selector
+        if (!drawerOpen) {
+          video.option = true;
+          osd = !video.videoQuality();
+        }
+        break;
+      case 84: // T: Sleep Timer / Auto-Pause selector
+        if (!drawerOpen) {
+          video.option = true;
+          osd = !video.sleepTimer();
+        }
+        break;
       case 83: // S: Skip active segment (Recap / Intro / Credits)
         if (!drawerOpen && (video.activeSkip || (video.intro && video.intro.state))) {
           osd = false;
           video.skipCurrentSegment();
         }
+        break;
+      case 80: // P: Previous Episode
+        !drawerOpen && video.prevEpisode(true);
         break;
       case 78: // N: Next Episode
         !drawerOpen && video.nextEpisode(true);
@@ -1285,10 +1455,37 @@ window.video = {
         osd = false;
         break;
     }
-    !drawerOpen && !video.speed.state && osd && video.showOSD();
+    !drawerOpen &&
+      !video.speed.state &&
+      !(video.quality && video.quality.state) &&
+      !(video.sleep && video.sleep.state) &&
+      osd &&
+      video.showOSD();
   },
 
   end: function () {
+    var fullDurSec = Math.floor(player.getDuration() || 0);
+    if (fullDurSec > 0) {
+      video.syncCurrentPlayheadToLists(Math.round(fullDurSec / 60));
+      video.saveHistory(fullDurSec);
+    }
+
+    if (video.sleep && video.sleep.episodesLeft === 1) {
+      video.sleep.active = "off";
+      video.sleep.episodesLeft = 0;
+      video.stopNext();
+      video.syncSleepUI();
+      player.pause();
+      video.showOSD(true);
+      if (typeof window.showToast === "function") {
+        window.showToast(
+          "Auto-Pause: Reached episode limit - playback paused",
+          "info"
+        );
+      }
+      return;
+    }
+
     var prefs =
       typeof settings !== "undefined" && typeof settings.getPlaybackPrefs === "function"
         ? settings.getPlaybackPrefs()
@@ -1304,15 +1501,41 @@ window.video = {
     }
   },
 
+  _playReqId: 0,
+
   play: function (item, noplay, forceSubtitle) {
+    var reqId = (video._playReqId = (video._playReqId || 0) + 1);
     video.episode = item.id;
+    video._lastLiveHeight = 0;
+    video.stopNext();
+    video.next.shown = false;
+    video.clearAutoSkip(true);
+    $("#skip-intro").hide();
+    if (typeof player !== "undefined" && player.video) {
+      try {
+        player.video.pause();
+      } catch (e) {}
+    }
+    if (video.episodesDrawer && video.episodesDrawer.open) {
+      video.renderEpisodesDrawer();
+    }
+    video.syncQualityUI();
     video.updateMediaSession();
     service.video_v2({
       data: {
         id: item.id,
       },
       success: function (data) {
-        video.token = data.token;
+        if (
+          reqId !== video._playReqId ||
+          video.episode !== item.id ||
+          !document.getElementById(video.id)
+        ) {
+          return;
+        }
+        var sessionEpId = item.id;
+        var sessionToken = data && data.token;
+        video.token = sessionToken;
         video.stopNext();
         video.setSkipIntro(item.id);
         video.next.shown = false;
@@ -1355,9 +1578,9 @@ window.video = {
           }
 
           player.play(
-            { token: data.token, id: item.id },
+            { token: sessionToken, id: sessionEpId },
             video.subtitles[subtitleIndex].url,
-            item.playhead === item.duration ? 0 : item.playhead,
+            item.duration && item.playhead >= item.duration ? 0 : item.playhead,
             noplay
           );
           video.startHistory();
@@ -1368,17 +1591,20 @@ window.video = {
           console.log(error);
         }
 
-        setTimeout(() => {
-          player.deleteSession({
-            data: {
-              id: video.episode,
-              token: video.token,
-            },
-          });
-        }, 3000);
+        if (sessionEpId && sessionToken) {
+          setTimeout(() => {
+            player.deleteSession({
+              data: {
+                id: sessionEpId,
+                token: sessionToken,
+              },
+            });
+          }, 3000);
+        }
         video.showOSD();
       },
       error: function (error) {
+        if (reqId !== video._playReqId) return;
         video.stopNext();
         video.next.shown = false;
         console.log(error);
@@ -1436,13 +1662,17 @@ window.video = {
     video._lastAutoSkipAt = 0;
     video._lastAutoSkipType = null;
     video._skipCooldownUntil = 0;
+    video._chaptersDirty = true;
     video.clearAutoSkip(true);
     $("#skip-intro").hide();
+    var markersEl = document.getElementById("chapter-markers");
+    if (markersEl) markersEl.innerHTML = "";
     service.intro({
       data: {
         id,
       },
       success: function (data) {
+        if (video.episode !== id || !document.getElementById(video.id)) return;
         if (data && data.recap && data.recap.end > data.recap.start) {
           video.recap = {
             start: data.recap.start,
@@ -1468,21 +1698,76 @@ window.video = {
             end: data.credits.end,
             state: false,
           };
-          var countEl = document.getElementById("next-episode-count");
-          if (countEl) {
-            countEl.innerText = Math.max(
-              5,
-              Math.round(video.credits.end - video.credits.start)
-            );
-          }
+          video.updateNextEpisodeCount();
         } else {
           video.credits = null;
         }
+        video._chaptersDirty = true;
+        video.renderChapterMarkers();
       },
       error: function (error) {
         console.log(error);
       },
     });
+  },
+
+  renderChapterMarkers: function () {
+    var container = document.getElementById("chapter-markers");
+    if (!container || typeof player === "undefined") return;
+    var dur = player.getDuration();
+    if (!dur || isNaN(dur) || dur <= 0) {
+      video._chaptersDirty = true;
+      return;
+    }
+    var segments = [];
+    if (video.recap && video.recap.end > video.recap.start) {
+      segments.push({
+        type: "recap",
+        label: "Recap",
+        start: Math.max(0, video.recap.start),
+        end: Math.min(dur, video.recap.end),
+      });
+    }
+    if (video.intro && video.intro.end > video.intro.start) {
+      segments.push({
+        type: "intro",
+        label: "Intro",
+        start: Math.max(0, video.intro.start),
+        end: Math.min(dur, video.intro.end),
+      });
+    }
+    if (video.credits && video.credits.end > video.credits.start) {
+      segments.push({
+        type: "credits",
+        label: "Credits",
+        start: Math.max(0, video.credits.start),
+        end: Math.min(dur, video.credits.end),
+      });
+    }
+    var html = "";
+    for (var i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+      if (seg.end <= seg.start) continue;
+      var leftPct = Math.max(0, Math.min(100, (seg.start / dur) * 100));
+      var widthPct = Math.max(0.6, Math.min(100 - leftPct, ((seg.end - seg.start) / dur) * 100));
+      html += `<span class="chapter-marker chapter-${seg.type}" data-chapter="${seg.label}" style="left:${leftPct.toFixed(2)}%;width:${widthPct.toFixed(2)}%"></span>`;
+    }
+    container.innerHTML = html;
+    video._chaptersDirty = false;
+  },
+
+  getChapterAtTime: function (sec) {
+    if (typeof sec !== "number" || isNaN(sec)) return "";
+    if (video.recap && sec >= video.recap.start && sec <= video.recap.end) {
+      return "Recap";
+    }
+    if (video.intro && sec >= video.intro.start && sec <= video.intro.end) {
+      return "Intro";
+    }
+    if (video.credits && sec >= video.credits.start && sec <= video.credits.end) {
+      return "Credits";
+    }
+    return "";
   },
 
   showSkip: function (time) {
@@ -1497,7 +1782,6 @@ window.video = {
             autoSkipIntro: false,
             autoSkipCredits: false,
             autoSkipRecap: false,
-            autoPlayNext: true,
             showSkipButton: true,
           };
 
@@ -1658,7 +1942,16 @@ window.video = {
     }
     $("#skip-intro").hide();
 
+    var sleepStopsAfterThis = Boolean(video.sleep && video.sleep.episodesLeft === 1);
     if (seg.type === "credits" && dur > 0 && targetEnd >= dur - 12) {
+      if (sleepStopsAfterThis) {
+        player.forwardTo(Math.min(targetEnd, Math.max(0, dur - 1)));
+        video.setPlayingTime();
+        if (targetEnd >= dur - 5) {
+          video.end();
+        }
+        return;
+      }
       if (prefs.autoPlayNext !== false) {
         clearInterval(video.timers.next);
         if (video.next && video.next.episode) {
@@ -1670,6 +1963,8 @@ window.video = {
       }
     }
     player.forwardTo(targetEnd);
+    video.updateNextEpisodeCount(targetEnd);
+    video.setPlayingTime();
   },
 
   setAudios: function () {
@@ -1693,10 +1988,19 @@ window.video = {
   changeAudio: function (index) {
     if (!video.audios || !video.audios[index]) return;
     var nextEpisodeId = video.audios[index].id;
+    var curPlayheadMin = player.getPlayed() / 60;
+    var baseDurMin =
+      player.getDuration() > 0
+        ? Math.round(player.getDuration() / 60)
+        : (video.currentItem && video.currentItem.duration) || 0;
+    var durMin =
+      baseDurMin > 0
+        ? Math.max(baseDurMin, Math.ceil(curPlayheadMin) + 1)
+        : 0;
     video.currentItem = Object.assign({}, video.currentItem || {}, {
       id: nextEpisodeId,
-      playhead: player.getPlayed() / 60,
-      duration: player.getDuration(),
+      playhead: curPlayheadMin,
+      duration: durMin,
     });
     if (video.episodesDrawer) {
       video.episodesDrawer.list = [];
@@ -1726,12 +2030,41 @@ window.video = {
 
   changeSubtitle: function (index) {
     if (!video.subtitles || !video.subtitles[index]) return;
+    var curPlayheadMin = player.getPlayed() / 60;
+    var baseDurMin =
+      player.getDuration() > 0
+        ? Math.round(player.getDuration() / 60)
+        : (video.currentItem && video.currentItem.duration) || 0;
+    var durMin =
+      baseDurMin > 0
+        ? Math.max(baseDurMin, Math.ceil(curPlayheadMin) + 1)
+        : 0;
     video.currentItem = Object.assign({}, video.currentItem || {}, {
       id: video.episode,
-      playhead: player.getPlayed() / 60,
-      duration: player.getDuration(),
+      playhead: curPlayheadMin,
+      duration: durMin,
     });
     video.play(video.currentItem, false, video.subtitles[index].name);
+  },
+
+  updateNextEpisodeCount: function (overrideTime) {
+    var countEl = document.getElementById("next-episode-count");
+    if (!countEl || typeof player === "undefined") return;
+    var totalTime = player.getDuration();
+    if (!totalTime || isNaN(totalTime) || totalTime <= 0) return;
+    var curTime =
+      typeof overrideTime === "number"
+        ? overrideTime
+        : player.getPlayed() +
+          (player.values && typeof player.values.forward_rewind === "number"
+            ? player.values.forward_rewind
+            : 0);
+    curTime = Math.max(0, curTime);
+    var remaining = Math.max(1, Math.ceil(totalTime - curTime));
+    var nextText = String(remaining);
+    if (countEl.innerText !== nextText) {
+      countEl.innerText = nextText;
+    }
   },
 
   stopNext: function () {
@@ -1744,27 +2077,176 @@ window.video = {
 
   playNext: function () {
     if (!video.next.episode) return;
-    video.saveHistory(Math.floor(player.getDuration()));
+    if (video.sleep && video.sleep.episodesLeft > 1) {
+      video.sleep.episodesLeft -= 1;
+      video.syncSleepUI();
+      if (typeof window.showToast === "function") {
+        window.showToast(
+          "Auto-Pause: " +
+            video.sleep.episodesLeft +
+            (video.sleep.episodesLeft === 1 ? " episode" : " episodes") +
+            " remaining",
+          "info"
+        );
+      }
+    }
+    var fullDurSec = Math.floor(player.getDuration() || 0);
+    if (fullDurSec > 0) {
+      video.syncCurrentPlayheadToLists(Math.round(fullDurSec / 60));
+    }
+    video.saveHistory(fullDurSec);
+    var nextEp = video.next.episode;
     video.currentItem = Object.assign(
       {},
       video.currentItem || {},
-      video.next.episode
+      nextEp
     );
-    video.play(video.next.episode);
-    $(".osd #title").text(video.next.episode.serie);
-    $(".osd #subtitle").text(
-      `${video.next.episode.season_number}x${video.next.episode.episode_number} - ${video.next.episode.episode}`
+    video.play(nextEp);
+    video.syncHomeEpisodesSlide();
+    $(".osd #title").text(nextEp.serie || nextEp.title || "");
+    var nextSub =
+      nextEp.season_number !== undefined && nextEp.episode_number !== undefined
+        ? `${nextEp.season_number}x${nextEp.episode_number} - ${
+            nextEp.episode || nextEp.title || ""
+          }`
+        : nextEp.episode || nextEp.title || "";
+    $(".osd #subtitle").text(nextSub);
+  },
+
+  prevEpisode: function () {
+    var reqEpId = video.episode;
+    var tryPlayPrevFromList = function (list) {
+      if (!Array.isArray(list) || !list.length) return false;
+      var curIdx = list.findIndex(function (ep) {
+        return video.isEpisodeMatch(ep);
+      });
+      if (curIdx < 0) return false;
+      if (curIdx === 0) {
+        if (typeof player !== "undefined" && player.getPlayed() > 10) {
+          player.forwardTo(0);
+          video.setPlayingTime();
+          if (typeof window.showToast === "function") {
+            window.showToast("Restarted first episode of season", "info");
+          }
+        } else if (typeof window.showToast === "function") {
+          window.showToast("Already at the first episode of this season", "info");
+        }
+        return true;
+      }
+      var prevEp = list[curIdx - 1];
+      if (!prevEp) return false;
+      video.syncCurrentPlayheadToLists(player.getPlayed() / 60);
+      video.saveHistory();
+      video.currentItem = Object.assign({}, video.currentItem || {}, prevEp, {
+        playhead: 0,
+      });
+      video.play(video.currentItem);
+      video.syncHomeEpisodesSlide();
+      $(".osd #title").text(video.currentItem.serie || video.currentItem.title || "");
+      var prevSub =
+        video.currentItem.season_number !== undefined &&
+        video.currentItem.episode_number !== undefined
+          ? `${video.currentItem.season_number}x${video.currentItem.episode_number} - ${
+              video.currentItem.episode || video.currentItem.title || ""
+            }`
+          : video.currentItem.episode || video.currentItem.title || "";
+      $(".osd #subtitle").text(prevSub);
+      return true;
+    };
+
+    if (
+      video.episodesDrawer &&
+      Array.isArray(video.episodesDrawer.list) &&
+      video.episodesDrawer.list.length > 0 &&
+      tryPlayPrevFromList(video.episodesDrawer.list)
+    ) {
+      return false;
+    }
+
+    if (
+      typeof home_episodes !== "undefined" &&
+      home_episodes.data &&
+      Array.isArray(home_episodes.data.episodes) &&
+      home_episodes.data.episodes.length > 0 &&
+      tryPlayPrevFromList(home_episodes.data.episodes)
+    ) {
+      return false;
+    }
+
+    var fetchSeasonAndPlayPrev = function (seasonId) {
+      if (!seasonId) return;
+      service.episodes({
+        data: { id: seasonId },
+        success: function (resp) {
+          if (
+            video.episode !== reqEpId ||
+            !document.getElementById(video.id) ||
+            !resp ||
+            !Array.isArray(resp.items) ||
+            !resp.items.length
+          ) {
+            return;
+          }
+          mapper.episodes(resp, function (mappedList) {
+            if (video.episode !== reqEpId || !document.getElementById(video.id)) {
+              return;
+            }
+            video.episodesDrawer.seasonId = seasonId;
+            video.episodesDrawer.list = mappedList || [];
+            tryPlayPrevFromList(video.episodesDrawer.list);
+          });
+        },
+        error: function () {},
+      });
+    };
+
+    var item = video.currentItem || {};
+    var drawerMatchesCurrent = Boolean(
+      video.episodesDrawer &&
+        Array.isArray(video.episodesDrawer.list) &&
+        video.episodesDrawer.list.some(video.isEpisodeMatch)
     );
+    var knownSeasonId =
+      item.season_id ||
+      (drawerMatchesCurrent && video.episodesDrawer.seasonId) ||
+      null;
+    if (knownSeasonId) {
+      fetchSeasonAndPlayPrev(knownSeasonId);
+    } else if (reqEpId) {
+      service.seriesInfo({
+        data: { id: reqEpId },
+        success: function (resp) {
+          if (video.episode !== reqEpId || !document.getElementById(video.id)) {
+            return;
+          }
+          var doc = resp && resp.data && resp.data[0];
+          var meta = (doc && doc.episode_metadata) || {};
+          if (meta.season_id) {
+            if (video.currentItem) {
+              video.currentItem.season_id = meta.season_id;
+            }
+            fetchSeasonAndPlayPrev(meta.season_id);
+          }
+        },
+        error: function () {},
+      });
+    }
+    return false;
   },
 
   nextEpisode: function (instant, fromEnded) {
+    var reqEpId = video.episode;
+    if (!reqEpId) return;
     video.next.shown = true;
     try {
       service.continue({
         data: {
-          ids: video.episode,
+          ids: reqEpId,
         },
         success: function (data) {
+          if (video.episode !== reqEpId || !document.getElementById(video.id)) {
+            return;
+          }
           var nextEp = mapper.continue(data);
           if (!nextEp || nextEp.id === video.episode) {
             video.next.episode = null;
@@ -1784,30 +2266,23 @@ window.video = {
             if (nextImgEl) {
               nextImgEl.setAttribute("src", video.next.episode.background || "");
             }
-            var countEl = document.getElementById("next-episode-count");
-            if (countEl && (!countEl.innerText || isNaN(+countEl.innerText) || +countEl.innerText <= 0)) {
-              countEl.innerText = "20";
-            }
+            video.updateNextEpisodeCount();
             $(".next-episode").show();
             $("#video-screen").addClass("next-ep-visible");
             video.next.status = true;
             clearInterval(video.timers.next);
             video.timers.next = setInterval(() => {
               var cEl = document.getElementById("next-episode-count");
-              if (!cEl) {
+              if (!cEl || !video.next.status) {
                 clearInterval(video.timers.next);
                 return;
               }
-              var value = parseInt(cEl.innerText, 10) || 1;
-              if (value <= 1) {
-                clearInterval(video.timers.next);
-              } else {
-                cEl.innerText = String(value - 1);
-              }
-            }, 1000);
+              video.updateNextEpisodeCount();
+            }, 250);
           }
         },
         error: function (error) {
+          if (video.episode !== reqEpId) return;
           console.log(error);
           if (fromEnded) {
             video.destroy();
@@ -1823,6 +2298,12 @@ window.video = {
   },
 
   playbackSpeed: function () {
+    if (video.quality && video.quality.state) {
+      video.hideVideoQuality();
+    }
+    if (video.sleep && video.sleep.state) {
+      video.hideSleepTimer();
+    }
     if (!video.speed.state) {
       var speedsOptions = `
         <ul id="speed-menu">
@@ -1872,12 +2353,341 @@ window.video = {
           video.speed.active === 1
             ? "Playback Speed ([ / ])"
             : "Playback Speed (" + video.speed.active + "x)";
+        var speedBadge =
+          video.speed.active !== 1 ? video.speed.active + "x" : "";
         speedIcon.setAttribute("data-tooltip", speedLabel);
-        speedIcon.setAttribute(
-          "data-speed-badge",
-          video.speed.active !== 1 ? video.speed.active + "x" : ""
+        speedIcon.setAttribute("data-speed-badge", speedBadge);
+        var speedBadgeEl = speedIcon.querySelector(".setting-badge");
+        if (speedBadgeEl) speedBadgeEl.textContent = speedBadge;
+      }
+    }
+  },
+
+  getActiveQualityKey: function () {
+    var q =
+      typeof session !== "undefined" &&
+      session.storage &&
+      session.storage.quality !== undefined &&
+      session.storage.quality !== null
+        ? String(session.storage.quality)
+        : "auto";
+    var exists = video.quality.options.some(function (opt) {
+      return opt.key === q;
+    });
+    return exists ? q : "auto";
+  },
+
+  videoQuality: function () {
+    if (video.speed && video.speed.state) {
+      video.hidePlaySpeed();
+    }
+    if (video.sleep && video.sleep.state) {
+      video.hideSleepTimer();
+    }
+    if (!video.quality.state) {
+      var activeKey = video.getActiveQualityKey();
+      var liveH =
+        typeof player !== "undefined" &&
+        typeof player.getLiveResolutionHeight === "function"
+          ? player.getLiveResolutionHeight()
+          : 0;
+      var qualityMenuHtml = `
+        <ul id="quality-menu">
+          ${video.quality.options
+            .map(
+              (opt) =>
+                `<li data-quality="${opt.key}" class="${
+                  opt.key === activeKey ? "active" : ""
+                }">${
+                  opt.key === "auto" && liveH > 0
+                    ? "Auto (" + liveH + "p)"
+                    : opt.label
+                }</li>`
+            )
+            .join("")}
+        </ul>
+      `;
+
+      video.quality.state = true;
+      video.showOSD(true);
+      $("#setting-options").hide();
+      $(".player-settings").append(qualityMenuHtml);
+      video.syncQualityUI();
+      return true;
+    }
+    video.hideVideoQuality();
+    video.showOSD();
+    return false;
+  },
+
+  hideVideoQuality: function () {
+    $("#quality-menu").remove();
+    $("#setting-options").show();
+    video.quality.state = false;
+  },
+
+  setQuality: function (incrementOrKey) {
+    var opts = video.quality.options;
+    var activeKey = video.getActiveQualityKey();
+    var targetOpt = null;
+
+    if (typeof incrementOrKey === "string") {
+      targetOpt = opts.find(function (o) {
+        return o.key === incrementOrKey;
+      });
+    } else if (typeof incrementOrKey === "number") {
+      var curIdx = opts.findIndex(function (o) {
+        return o.key === activeKey;
+      });
+      if (curIdx < 0) curIdx = 0;
+      var nextIdx = curIdx + incrementOrKey;
+      if (nextIdx >= 0 && nextIdx < opts.length) {
+        targetOpt = opts[nextIdx];
+      }
+    }
+
+    if (!targetOpt) return;
+
+    if (typeof player !== "undefined" && typeof player.setVideoQuality === "function") {
+      player.setVideoQuality(targetOpt.key);
+    }
+    video.syncQualityUI();
+
+    if (typeof window.showToast === "function") {
+      window.showToast(
+        "Video quality: " + (targetOpt.key === "auto" ? "Auto" : targetOpt.label),
+        "info"
+      );
+    }
+  },
+
+  syncQualityUI: function () {
+    var activeKey = video.getActiveQualityKey();
+    var activeOpt =
+      video.quality.options.find(function (o) {
+        return o.key === activeKey;
+      }) || video.quality.options[0];
+    var liveH =
+      typeof player !== "undefined" &&
+      typeof player.getLiveResolutionHeight === "function"
+        ? player.getLiveResolutionHeight()
+        : 0;
+    video._lastLiveHeight = liveH;
+
+    var items = $("#quality-menu li");
+    if (items.length) {
+      items.removeClass("active");
+      items.each(function () {
+        var k = this.getAttribute("data-quality");
+        if (k === activeKey) {
+          this.classList.add("active");
+        }
+        if (k === "auto") {
+          this.textContent = liveH > 0 ? "Auto (" + liveH + "p)" : "Auto";
+        }
+      });
+    }
+
+    var qualityIcon = document.querySelector("#setting-options i.video-quality");
+    if (qualityIcon) {
+      var qualityLabel =
+        activeKey === "auto"
+          ? liveH > 0
+            ? "Video Quality: Auto - " + liveH + "p (Q)"
+            : "Video Quality: Auto (Q)"
+          : "Video Quality: " + activeOpt.label + " (Q)";
+      var badgeText =
+        activeKey !== "auto"
+          ? activeOpt.label
+          : liveH > 0
+          ? "A " + liveH + "p"
+          : "";
+      qualityIcon.setAttribute("data-tooltip", qualityLabel);
+      qualityIcon.setAttribute("data-quality-badge", badgeText);
+      qualityIcon.setAttribute("data-quality-mode", activeKey);
+      var qualityBadgeEl = qualityIcon.querySelector(".setting-badge");
+      if (qualityBadgeEl) qualityBadgeEl.textContent = badgeText;
+    }
+  },
+
+  clearSleepCountdown: function () {
+    if (video.sleep && video.sleep.timerId) {
+      clearInterval(video.sleep.timerId);
+      video.sleep.timerId = null;
+    }
+    if (video.sleep) {
+      video.sleep.active = "off";
+      video.sleep.episodesLeft = 0;
+      video.sleep.endsAt = 0;
+      video.sleep.state = false;
+    }
+  },
+
+  sleepTimer: function () {
+    if (video.speed && video.speed.state) {
+      video.hidePlaySpeed();
+    }
+    if (video.quality && video.quality.state) {
+      video.hideVideoQuality();
+    }
+    if (!video.sleep.state) {
+      var activeKey = (video.sleep && video.sleep.active) || "off";
+      var sleepMenuHtml = `
+        <ul id="sleep-menu">
+          ${video.sleep.options
+            .map(
+              (opt) =>
+                `<li data-sleep="${opt.key}" class="${
+                  opt.key === activeKey ? "active" : ""
+                }">${opt.label}</li>`
+            )
+            .join("")}
+        </ul>
+      `;
+
+      video.sleep.state = true;
+      video.showOSD(true);
+      $("#setting-options").hide();
+      $(".player-settings").append(sleepMenuHtml);
+      video.syncSleepUI();
+      return true;
+    }
+    video.hideSleepTimer();
+    video.showOSD();
+    return false;
+  },
+
+  hideSleepTimer: function () {
+    $("#sleep-menu").remove();
+    $("#setting-options").show();
+    if (video.sleep) {
+      video.sleep.state = false;
+    }
+  },
+
+  setSleepTimer: function (incrementOrKey) {
+    var opts = video.sleep.options;
+    var activeKey = (video.sleep && video.sleep.active) || "off";
+    var targetOpt = null;
+
+    if (typeof incrementOrKey === "string") {
+      targetOpt = opts.find(function (o) {
+        return o.key === incrementOrKey;
+      });
+    } else if (typeof incrementOrKey === "number") {
+      var curIdx = opts.findIndex(function (o) {
+        return o.key === activeKey;
+      });
+      if (curIdx < 0) curIdx = 0;
+      var nextIdx = curIdx + incrementOrKey;
+      if (nextIdx >= 0 && nextIdx < opts.length) {
+        targetOpt = opts[nextIdx];
+      }
+    }
+
+    if (!targetOpt) return;
+
+    if (video.sleep.timerId) {
+      clearInterval(video.sleep.timerId);
+      video.sleep.timerId = null;
+    }
+
+    video.sleep.active = targetOpt.key;
+    video.sleep.episodesLeft = targetOpt.episodes || 0;
+    video.sleep.endsAt =
+      targetOpt.minutes > 0 ? Date.now() + targetOpt.minutes * 60 * 1000 : 0;
+
+    if (video.sleep.episodesLeft === 1 && video.next && video.next.status) {
+      video.stopNext();
+      video.next.shown = false;
+    }
+
+    if (video.sleep.endsAt > 0) {
+      video.sleep.timerId = setInterval(function () {
+        if (!video.sleep || video.sleep.endsAt <= 0) {
+          clearInterval(video.sleep.timerId);
+          video.sleep.timerId = null;
+          return;
+        }
+        if (Date.now() >= video.sleep.endsAt) {
+          clearInterval(video.sleep.timerId);
+          video.sleep.timerId = null;
+          video.sleep.active = "off";
+          video.sleep.endsAt = 0;
+          video.syncSleepUI();
+          if (typeof player !== "undefined") {
+            player.pause();
+          }
+          video.showOSD(true);
+          if (typeof window.showToast === "function") {
+            window.showToast("Sleep Timer: Playback paused", "info");
+          }
+          return;
+        }
+        video.syncSleepUI();
+      }, 1000);
+    }
+
+    video.syncSleepUI();
+
+    if (typeof window.showToast === "function") {
+      if (targetOpt.key === "off") {
+        window.showToast("Sleep Timer: Off", "info");
+      } else if (targetOpt.episodes > 0) {
+        window.showToast(
+          "Auto-Pause: Stop after " +
+            (targetOpt.episodes === 1
+              ? "this episode"
+              : targetOpt.episodes + " episodes"),
+          "info"
+        );
+      } else if (targetOpt.minutes > 0) {
+        window.showToast(
+          "Sleep Timer: Pause in " + targetOpt.minutes + " minutes",
+          "info"
         );
       }
+    }
+  },
+
+  syncSleepUI: function () {
+    var activeKey = (video.sleep && video.sleep.active) || "off";
+    var items = $("#sleep-menu li");
+    if (items.length) {
+      items.removeClass("active");
+      items.each(function () {
+        if (this.getAttribute("data-sleep") === activeKey) {
+          this.classList.add("active");
+        }
+      });
+    }
+
+    var sleepIcon = document.querySelector("#setting-options i.sleep-timer");
+    if (sleepIcon) {
+      var badge = "";
+      var tooltip = "Sleep Timer / Auto-Pause (T)";
+      if (video.sleep && video.sleep.episodesLeft > 0) {
+        badge =
+          video.sleep.episodesLeft === 1
+            ? "1 ep"
+            : video.sleep.episodesLeft + " eps";
+        tooltip =
+          "Auto-Pause: " +
+          video.sleep.episodesLeft +
+          (video.sleep.episodesLeft === 1 ? " episode" : " episodes") +
+          " left (T)";
+      } else if (video.sleep && video.sleep.endsAt > Date.now()) {
+        var minsLeft = Math.max(
+          1,
+          Math.ceil((video.sleep.endsAt - Date.now()) / 60000)
+        );
+        badge = minsLeft + "m";
+        tooltip = "Sleep Timer: " + minsLeft + "m left (T)";
+      }
+      sleepIcon.setAttribute("data-tooltip", tooltip);
+      sleepIcon.setAttribute("data-sleep-badge", badge);
+      var sleepBadgeEl = sleepIcon.querySelector(".setting-badge");
+      if (sleepBadgeEl) sleepBadgeEl.textContent = badge;
     }
   },
 
@@ -1916,6 +2726,12 @@ window.video = {
       if (video.speed && video.speed.state) {
         video.hidePlaySpeed();
       }
+      if (video.quality && video.quality.state) {
+        video.hideVideoQuality();
+      }
+      if (video.sleep && video.sleep.state) {
+        video.hideSleepTimer();
+      }
       video.hideOSD();
     }, timeoutMs);
   },
@@ -1927,6 +2743,12 @@ window.video = {
     $("#setting-options").children().removeClass("selected");
     if (video.speed && video.speed.state) {
       video.hidePlaySpeed();
+    }
+    if (video.quality && video.quality.state) {
+      video.hideVideoQuality();
+    }
+    if (video.sleep && video.sleep.state) {
+      video.hideSleepTimer();
     }
     var osds = document.querySelectorAll("#osd, #video-screen .osd");
     for (var i = 0; i < osds.length; i++) {
@@ -1995,6 +2817,17 @@ window.video = {
     if (!totalTime || isNaN(totalTime)) return;
     var timePercent = (100 * time) / totalTime;
 
+    if (video._chaptersDirty) {
+      video.renderChapterMarkers();
+    }
+
+    if (typeof player.getLiveResolutionHeight === "function") {
+      var curLiveH = player.getLiveResolutionHeight();
+      if (curLiveH > 0 && curLiveH !== video._lastLiveHeight) {
+        video.syncQualityUI();
+      }
+    }
+
     if (video.recap || video.intro || video.credits || video.activeSkip) {
       video.showSkip(time);
     }
@@ -2008,22 +2841,22 @@ window.video = {
       (video.credits && time >= video.credits.start) ||
       (!video.credits && totalTime > 120 && time >= totalTime - 30);
 
+    var sleepStopsAfterThis = Boolean(video.sleep && video.sleep.episodesLeft === 1);
+
     if (
       prefs.autoPlayNext !== false &&
+      !sleepStopsAfterThis &&
       !video.next.shown &&
       player.state === player.states.PLAYING &&
       inNextEpWindow
     ) {
-      if (!video.credits) {
-        var countEl = document.getElementById("next-episode-count");
-        if (countEl) {
-          countEl.innerText = String(Math.max(5, Math.round(totalTime - time)));
-        }
-      }
+      video.updateNextEpisodeCount(time);
       video.nextEpisode();
-    } else if (video.next.status && !inNextEpWindow) {
+    } else if (video.next.status && (!inNextEpWindow || sleepStopsAfterThis)) {
       video.stopNext();
       video.next.shown = false;
+    } else if (video.next.status && inNextEpWindow) {
+      video.updateNextEpisodeCount(time);
     }
 
     var osd = document.getElementById("osd");
@@ -2044,7 +2877,12 @@ window.video = {
         !document.body.classList.contains("hide-cursor") ||
         document.body.classList.contains("show-floating-toolbar"))
     ) {
-      var maxIdleMs = video.speed && video.speed.state ? 4200 : 2200;
+      var maxIdleMs =
+        (video.speed && video.speed.state) ||
+        (video.quality && video.quality.state) ||
+        (video.sleep && video.sleep.state)
+          ? 4200
+          : 2200;
       var lastAct = window.lastUserActivityAt || 0;
       if (lastAct > 0 && Date.now() - lastAct > maxIdleMs) {
         video.hideOSD();

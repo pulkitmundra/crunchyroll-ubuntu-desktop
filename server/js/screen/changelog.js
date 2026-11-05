@@ -1,8 +1,13 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.1.0",
+    version: "v2.2.0",
     changes: [
+      {
+        title: "In-Player Video Quality, Sleep Timer, Chapter Markers & Airing Status",
+        description:
+          "Added live mid-stream Video Quality switching (Q) with active Auto resolution badge, Sleep Timer / Auto-Pause (T), Previous Episode navigation (P), timeline Intro/Credits/Recap markers, Ongoing/Completed badges with non-blocking next-episode & finale estimates, and instant Next Episode countdown sync.",
+      },
       {
         title: "GNOME Media Keys, Frame Capture, Season Switcher & History Controls",
         description:
@@ -12,11 +17,6 @@ window.changelog = {
         title: "Delete Custom List Confirmation Dialog & Toast Notifications",
         description:
           "Added a safety confirmation modal before deleting any Custom List, a Delete List button on My List row headers, empty-name validation on Create & Add, and confirmation toasts across all Watchlist and Custom List actions.",
-      },
-      {
-        title: "Star Ratings, Sub | Dub Badges & Custom Lists",
-        description:
-          "Added Crunchyroll star ratings, Sub | Dub badges on cards and banners, and a Manage Lists modal for Watchlist and Custom Lists.",
       },
     ],
   },

@@ -2,6 +2,29 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.2.0] - 2026-11-05
+
+### Added
+- **In-Player Video Quality Selector & Live `Auto` Resolution Indicator (`server/js/core/player.js`, `server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Added a Video Quality button (`fa-sliders`) in the top-right video player toolbar and keyboard shortcut `Q` that opens a frosted pill bar (`#quality-menu`) to switch between `Auto`, `1080p`, `720p`, `480p`, `360p`, and `240p` live mid-stream via `dash.js` without reloading the episode, synced with `session.storage.quality`.
+  - Hooked `dash.js` `QUALITY_CHANGE_RENDERED` and `STREAM_INITIALIZED` events (`player.getLiveResolutionHeight`) so `Auto` mode displays the active negotiated resolution in the menu (`Auto (1080p)`) and on the toolbar icon badge (`A 1080p`).
+- **Sleep Timer / Auto-Pause (`server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Added a Sleep Timer button (`fa-moon`) in the top-right player toolbar and keyboard shortcut `T` with 6 options (`Off`, `This Ep`, `2 Eps`, `3 Eps`, `30m`, `60m`) and a live orange status badge on the toolbar icon.
+  - Automatically suppresses auto-advance and pauses playback at the end of the target episode count or countdown duration with a toast notification.
+- **Previous Episode Navigation (`server/js/screen/video.js`):**
+  - Added a Previous Episode button (`fa-backward-step`) in the player toolbar and keyboard shortcut `P` (`video.prevEpisode`), and wired the MediaSession `previoustrack` handler so pressing the hardware Previous key within the first 15 seconds jumps to the previous episode.
+- **Timeline Chapter Markers & Hover Chapter Labels (`server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Added color-coded chapter markers (`#chapter-markers`) directly on the video progress bar for **Recap**, **Intro**, and **Credits** segments and appended the active segment name to the hover timestamp tooltip (`01:24 - Intro`, `22:10 - Credits`).
+- **`Ongoing` / `Completed` Airing Status, Next-Episode Countdown & Estimated Finale Badges (`server/js/core/mappers/crunchyroll.js`, `server/js/screen/home.details.js`, `server/js/screen/home.js`, `server/js/screen/mylist.js`, `server/css/home.css`, `js/app.js`):**
+  - Extracts native Crunchyroll `is_simulcast`, `is_complete`, and `series_launch_year` metadata for instant zero-latency **`Ongoing`** (emerald pulse dot), **`Completed`** (check badge), and launch year badges across the Home hero banner, Anime Details, My List, and poster cards (`AIRING` badge).
+  - Performs non-blocking, timeout-guarded (`3500ms`), two-tier cached (`Map` + `sessionStorage`) background enrichment via AniList GraphQL (`https://graphql.anilist.co`) to display planned episode counts (`6 / 12 Eps`), next-episode countdowns (`Ep 7 in 2d 14h`), and estimated season finale dates (`Est. Finale: Jun 28`) without ever blocking or delaying UI rendering.
+
+### Fixed
+- **Next-Episode Countdown Timer Sync on Skip Credits & Seek (`server/js/screen/video.js`, `server/js/core/player.js`):**
+  - Added `video.updateNextEpisodeCount()` and wired it into `skipCurrentSegment()`, `setPlayingTime()`, `nextEpisode()`, `player.seekBy()`, and `player.forwardTo()` so `#next-episode-count` always reflects the true remaining seconds of the episode after skipping credits or scrubbing.
+
+---
+
 ## [v2.1.0] - 2026-11-02
 
 ### Added

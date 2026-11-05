@@ -20,7 +20,7 @@ $ crunchyroll --ozone-platform=x11
 
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/stargazers"><img src="https://img.shields.io/github/stars/pulkitmundra/crunchyroll-ubuntu-desktop?style=social" alt="GitHub Stars" /></a>&nbsp;
-  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.1.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
+  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.2.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
   <a href="https://github.com/pulkitmundra"><img src="https://img.shields.io/badge/Maintainer-%40pulkitmundra-181717?style=flat&logo=github" alt="Maintainer" /></a>&nbsp;
   <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>&nbsp;
   <a href="https://buymeacoffee.com/pulkitmundra"><img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>&nbsp;
@@ -97,9 +97,9 @@ flowchart LR
   - Configurable **Playback & Auto-Skip** toggles in **Settings** (`Auto-Skip Intro`, `Auto-Skip Credits`, `Auto-Skip Recap`, `Auto-Play Next Episode`, `Show Skip Buttons`). When Auto-Skip is enabled for a segment, the skip pill displays a smooth **`3.2s` animated progress fill** from left to right; clicking anywhere else in the player window (or pressing `Esc` / `Backspace` / `Space`) aborts the auto-skip countdown for that segment without interrupting playback.
 - **In-Player Season Episode List Drawer (`E`)**:
   - Click the **Episodes** icon in the player OSD or press `E` to slide out a frosted glass drawer listing all episodes in the current season with thumbnails, watch progress bars, `Sub | Dub` badges, and 1-click episode switching without leaving the player.
-- **Hover-Preview Timeline Scrubber & Full-Pill Volume Slider**:
-  - Sleek `5px` progress track that expands to `12px` on hover with a glowing circular thumb, ghost hover-fill bar (`#seek-hover`), floating timestamp preview (`#seek-tooltip`), click-and-drag scrubbing, and `5s` mouse-wheel timeline seeking.
-  - Click-and-drag volume scrubbing across the entire `#osd-volume` pill container, plus `Playback Speed` control (`0.25x` - `2x` via `[` / `]` or the `fa-gauge-high` OSD menu).
+- **Hover-Preview Timeline Scrubber, Chapter Markers & Full-Pill Volume Slider**:
+  - Sleek `5px` progress track that expands to `12px` on hover with a glowing circular thumb, ghost hover-fill bar (`#seek-hover`), color-coded **Recap / Intro / Credits** chapter markers (`#chapter-markers`), floating timestamp + chapter preview (`#seek-tooltip`), click-and-drag scrubbing, and `5s` mouse-wheel timeline seeking.
+  - Click-and-drag volume scrubbing across the entire `#osd-volume` pill container, live in-player **Video Quality** selector (`Auto` with live resolution badge, `1080p`, `720p`, `480p`, `360p`, `240p` via `Q`), **Sleep Timer / Auto-Pause** (`1 Ep`, `2 Ep`, `3 Ep`, `30m`, `60m` via `T`), and **Playback Speed** control (`0.25x` - `2x` via `[` / `]`).
 - **Synchronized Auto-Hide HUD & Cursor**:
   - Scoped strictly to `#video-screen` so the cursor never disappears on non-video screens, and automatically stays visible whenever the Audio/Subtitles drawer, Episodes drawer, Sidebar Menu, or Exit modal is open.
 
@@ -123,8 +123,9 @@ flowchart LR
 - **Unified Modernist Minimal Design System**:
   - Every screen (`Home`, `Category View`, `Anime Details`, `Seasons & Episodes`, `Browse`, `My List`, `Watch History`, `Search`, `Settings`, `Profile Switcher`, `Login`, and `Video Player`) shares a cohesive frosted-obsidian aesthetic (`#08080c` base, `backdrop-filter: blur(14px-22px)` surfaces, hairline borders, `#f47521` accents, and a pixel-exact `124px` left alignment rail).
   - Compact `36vh` Home hero banner while browsing rows (giving poster carousels `64vh` of vertical space with zero bottom dead space) that expands to `52vh` when the hero banner is focused.
-- **Crunchyroll Star Ratings & `Sub | Dub` Badges**:
-  - Displays Crunchyroll Star Rating pills (`4.9 (120K)`), `Sub | Dub` / `Sub` / `Dub` audio badges, maturity ratings, season/episode counts, and genre chips across the Home hero banner, Anime Details, My List, and poster/episode cards.
+- **Crunchyroll Star Ratings, `Ongoing / Completed` Airing Status, Schedule & `Sub | Dub` Badges**:
+  - Displays Crunchyroll Star Rating pills (`4.9 (120K)`), **`Ongoing`** (pulsing green indicator) / **`Completed`** status badges, `Sub | Dub` / `Sub` / `Dub` audio badges, maturity ratings, launch year, season/episode counts (`6 / 12 Eps`), and genre chips across the Home hero banner, Anime Details, My List, and poster/episode cards.
+  - Non-blocking, timeout-guarded background enrichment via AniList GraphQL (`https://graphql.anilist.co`) adds live next-episode countdown pills (`Ep 7 in 2d 14h`) and estimated season finale dates (`Est. Finale: Jun 28`) on ongoing series without ever blocking UI rendering.
 - **Custom Lists ("Crunchylists") & Watchlist Manager**:
   - Click **Manage Lists** on the Anime Details screen to toggle Watchlist membership, add/remove the series across any of your Custom Lists ("Crunchylists"), create new Custom Lists, or delete Custom Lists.
   - Hover any card in **My List** (`Watchlist` or Custom Lists) to access a 1-click quick-remove trash button (`.mylist-quick-remove`), or click **Delete List** on any Custom List row header.
@@ -204,12 +205,14 @@ chmod +x install.sh
 | **Toggle Pin on Top / Auto-PiP** | Click **Pin on Top** in top dock | `F10` or `Ctrl + T` |
 | **Seek `5s` / `10s`** | Click/drag timeline or scroll wheel on bar | `Left` / `Right` (`5s`), `J` / `L` (`10s`) |
 | **Volume / Mute** | Click/drag `#osd-volume` pill or wheel | `Up` / `Down` Arrow, `M` (Mute) |
+| **Video Quality (`Auto` - `1080p`)** | Click **Quality** (`fa-sliders`) in OSD | `Q` |
+| **Sleep Timer / Auto-Pause** | Click **Sleep Timer** (`fa-moon`) in OSD | `T` |
 | **Playback Speed (`0.25x` - `2x`)** | Click **Speed** (`fa-gauge-high`) in OSD | `[` (Slower) / `]` (Faster) |
 | **Capture Video Frame** | Click **Camera** (`fa-camera`) in OSD | `Ctrl + Shift + S` |
 | **Skip Recap / Intro / Credits** | Click **Skip** pill (click elsewhere to abort auto-skip) | `S` or `Enter` |
 | **In-Player Episodes Drawer** | Click **Episodes** in OSD (`<` / `>` for seasons) | `E` |
 | **Audio & Subtitles Drawer** | Click **Audio & Subtitles** in OSD | `C` |
-| **Next Episode / Aspect Ratio** | Click **Next** / **Expand** in OSD | `N` (Next) / `Z` (Aspect Ratio) |
+| **Prev / Next Episode / Aspect Ratio** | Click **Prev** / **Next** / **Expand** in OSD | `P` (Prev) / `N` (Next) / `Z` (Aspect Ratio) |
 | **Open Sidebar Menu** | Hover left edge or click **Menu** in top dock | `Left` Arrow from screen edge |
 | **Global Search** | Click **Search** in sidebar menu | `Ctrl + F` or `/` |
 | **Back / Close Modal** | Click `<- Back` pill or Right-click anywhere | `Escape`, `Backspace`, or `Alt + Left` |
@@ -226,7 +229,7 @@ crunchyroll-ubuntu-desktop/
 ├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen & screenshot IPC)
 ├── preload.js                    # Electron preload bridge (pointer/hover telemetry & window IPC)
 ├── index.html                    # Outer Electron shell
-├── package.json                  # Package metadata (v2.1.0)
+├── package.json                  # Package metadata (v2.2.0)
 ├── install.sh                    # Automated installer (downloads Castlabs Widevine runtime & links repo)
 ├── CHANGELOG.md                  # Full release history & audit changelog
 ├── LICENSE                       # ISC License

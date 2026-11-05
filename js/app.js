@@ -571,6 +571,12 @@ function setupFloatingToolbar() {
       if (video.speed && video.speed.state) {
         video.hidePlaySpeed();
       }
+      if (video.quality && video.quality.state) {
+        video.hideVideoQuality();
+      }
+      if (video.sleep && video.sleep.state) {
+        video.hideSleepTimer();
+      }
     }
     if (typeof menu !== "undefined") {
       if (
@@ -815,7 +821,13 @@ function setupFloatingToolbar() {
     }
 
     if (isVideoActive() && !isVideoDrawerOpen()) {
-      video.showOSD(Boolean(video.speed && video.speed.state));
+      video.showOSD(
+        Boolean(
+          (video.speed && video.speed.state) ||
+            (video.quality && video.quality.state) ||
+            (video.sleep && video.sleep.state)
+        )
+      );
     } else {
       scheduleUnifiedHide(2000);
     }
@@ -943,7 +955,16 @@ function setupMouseSupport() {
     if (tooltipEl && typeof player !== "undefined") {
       var dur = player.getDuration();
       if (dur && dur > 0) {
-        tooltipEl.textContent = formatSeekTime(ratio * dur, dur);
+        var hoverSec = ratio * dur;
+        var timeLabel = formatSeekTime(hoverSec, dur);
+        if (typeof video !== "undefined" && typeof video.getChapterAtTime === "function") {
+          var chap = video.getChapterAtTime(hoverSec);
+          var chapLabel = typeof chap === "string" ? chap : chap && chap.label;
+          if (chapLabel) {
+            timeLabel += " - " + chapLabel;
+          }
+        }
+        tooltipEl.textContent = timeLabel;
         var clampedPct = Math.max(3, Math.min(97, pct));
         tooltipEl.style.left = clampedPct + "%";
         tooltipEl.classList.add("visible");
@@ -1085,7 +1106,14 @@ function setupMouseSupport() {
       } else {
         updateProgressHover(hoverBarEl, 0, false);
       }
-      if (e.target && !e.target.closest("#setting-options i") && video.option) {
+      if (
+        e.target &&
+        !e.target.closest("#setting-options i") &&
+        video.option &&
+        !(video.speed && video.speed.state) &&
+        !(video.quality && video.quality.state) &&
+        !(video.sleep && video.sleep.state)
+      ) {
         $("#setting-options i").removeClass("selected");
         video.option = false;
       }
@@ -1171,6 +1199,8 @@ function setupMouseSupport() {
       target.closest(".next-episode") ||
       target.closest("#languages-content") ||
       target.closest("#speed-menu") ||
+      target.closest("#quality-menu") ||
+      target.closest("#sleep-menu") ||
       target.closest("#keyboard-screen") ||
       target.closest("#profiles-screen") ||
       target.closest("#login-screen")
@@ -1276,7 +1306,12 @@ function setupMouseSupport() {
           allIcons.removeClass("selected");
           $(settingIcon).addClass("selected");
           video.option = true;
-        } else if (video.option) {
+        } else if (
+          video.option &&
+          !(video.speed && video.speed.state) &&
+          !(video.quality && video.quality.state) &&
+          !(video.sleep && video.sleep.state)
+        ) {
           $("#setting-options i").removeClass("selected");
           video.option = false;
         }
@@ -1422,6 +1457,12 @@ function setupMouseSupport() {
               ? mapper.formatMetaBadges(mlDataItem)
               : ""
           );
+          if (
+            typeof mapper !== "undefined" &&
+            typeof mapper.triggerHeroEnrichment === "function"
+          ) {
+            mapper.triggerHeroEnrichment(mlDataItem, "generic-meta-row", 220);
+          }
         }
       }
       return;
@@ -1466,6 +1507,12 @@ function setupMouseSupport() {
             ? mapper.formatMetaBadges(item)
             : ""
         );
+        if (
+          typeof mapper !== "undefined" &&
+          typeof mapper.triggerHeroEnrichment === "function"
+        ) {
+          mapper.triggerHeroEnrichment(item, "hero-meta-row", 220);
+        }
         var descEl = $("#home-screen .details .info .description")[0];
         if (descEl) {
           descEl.innerText = item.description;
@@ -1724,7 +1771,6 @@ function setupMouseSupport() {
           if (curY <= 0 && dy < -2) {
             if (detailsEl) detailsEl.classList.add("full");
             home.position = 0;
-            home._previewItem = null;
             home.show_details();
             setTrackOffset(vTrack, "y", 0);
           } else {
@@ -2028,6 +2074,32 @@ function setupMouseSupport() {
           }
         }
         video.hidePlaySpeed();
+        video.showOSD();
+        return;
+      }
+
+      if (video.quality && video.quality.state) {
+        var qualityLi = target.closest("#quality-menu li");
+        if (qualityLi) {
+          var qKey = qualityLi.getAttribute("data-quality");
+          if (qKey) {
+            video.setQuality(qKey);
+          }
+        }
+        video.hideVideoQuality();
+        video.showOSD();
+        return;
+      }
+
+      if (video.sleep && video.sleep.state) {
+        var sleepLi = target.closest("#sleep-menu li");
+        if (sleepLi) {
+          var sKey = sleepLi.getAttribute("data-sleep");
+          if (sKey) {
+            video.setSleepTimer(sKey);
+          }
+        }
+        video.hideSleepTimer();
         video.showOSD();
         return;
       }
@@ -2370,7 +2442,9 @@ function setupMouseSupport() {
       if (histQuickRemove) {
         e.stopPropagation();
         var hContentId = histQuickRemove.getAttribute("data-content-id");
-        var hLabel = histQuickRemove.getAttribute("data-history-label");
+        var hLabel =
+          histQuickRemove.getAttribute("data-history-label") ||
+          histQuickRemove.getAttribute("data-label");
         if (hContentId && typeof historyScreen.removeHistoryItem === "function") {
           historyScreen.removeHistoryItem(hContentId, hLabel);
         }

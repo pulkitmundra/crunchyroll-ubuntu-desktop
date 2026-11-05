@@ -142,8 +142,42 @@ body.compact-window #video-screen .osd .player-settings {
     box-shadow 0.16s ease;
 }
 
-#video-screen .osd .player-settings #setting-options i.playback-speed {
+#video-screen .osd .player-settings #setting-options i.playback-speed,
+#video-screen .osd .player-settings #setting-options i.video-quality,
+#video-screen .osd .player-settings #setting-options i.sleep-timer {
   font-size: clamp(17px, calc(17px * var(--ui-scale, 1)), 26px);
+}
+
+#video-screen
+  .osd
+  .player-settings
+  #setting-options
+  i
+  .setting-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #f47521;
+  color: #000000;
+  font-family: "Lato", sans-serif;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+}
+
+#video-screen
+  .osd
+  .player-settings
+  #setting-options
+  i
+  .setting-badge:empty {
+  display: none;
 }
 
 #video-screen .osd .player-settings #setting-options i:hover,
@@ -198,7 +232,9 @@ body.compact-window #video-screen .osd .player-settings {
   transform: translateX(0) translateY(0);
 }
 
-#video-screen .osd .player-settings #speed-menu {
+#video-screen .osd .player-settings #speed-menu,
+#video-screen .osd .player-settings #quality-menu,
+#video-screen .osd .player-settings #sleep-menu {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -216,14 +252,18 @@ body.compact-window #video-screen .osd .player-settings {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.78);
 }
 
-body.compact-window #video-screen .osd .player-settings #speed-menu {
+body.compact-window #video-screen .osd .player-settings #speed-menu,
+body.compact-window #video-screen .osd .player-settings #quality-menu,
+body.compact-window #video-screen .osd .player-settings #sleep-menu {
   padding: 14px;
   gap: 10px;
   border-radius: 26px;
   border-width: 3px;
 }
 
-#video-screen .osd .player-settings #speed-menu li {
+#video-screen .osd .player-settings #speed-menu li,
+#video-screen .osd .player-settings #quality-menu li,
+#video-screen .osd .player-settings #sleep-menu li {
   font-weight: 700;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
@@ -240,13 +280,16 @@ body.compact-window #video-screen .osd .player-settings #speed-menu {
   z-index: 1;
   cursor: pointer;
   box-sizing: border-box;
+  white-space: nowrap;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
     transform 0.15s ease;
 }
 
-body.compact-window #video-screen .osd .player-settings #speed-menu li {
+body.compact-window #video-screen .osd .player-settings #speed-menu li,
+body.compact-window #video-screen .osd .player-settings #quality-menu li,
+body.compact-window #video-screen .osd .player-settings #sleep-menu li {
   height: 78px;
   min-width: 104px;
   padding: 0 24px;
@@ -254,12 +297,16 @@ body.compact-window #video-screen .osd .player-settings #speed-menu li {
   border-radius: 18px;
 }
 
-#video-screen .osd .player-settings #speed-menu li:hover {
+#video-screen .osd .player-settings #speed-menu li:hover,
+#video-screen .osd .player-settings #quality-menu li:hover,
+#video-screen .osd .player-settings #sleep-menu li:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.1);
 }
 
-#video-screen .osd .player-settings #speed-menu li.active {
+#video-screen .osd .player-settings #speed-menu li.active,
+#video-screen .osd .player-settings #quality-menu li.active,
+#video-screen .osd .player-settings #sleep-menu li.active {
   background: #f47521;
   color: #000000;
   font-weight: 800;
@@ -639,6 +686,48 @@ body.compact-window.scrubbing-progress #video-screen .osd .progress .bar {
 #video-screen .osd .progress.hover-active .bar #seek-hover,
 body.scrubbing-progress #video-screen .osd .progress .bar #seek-hover {
   opacity: 1;
+}
+
+#video-screen .osd .progress .bar #chapter-markers {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+#video-screen .osd .progress .bar .chapter-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 214, 70, 0.42);
+  border-left: 2px solid rgba(255, 232, 120, 0.95);
+  border-right: 2px solid rgba(255, 232, 120, 0.95);
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+
+#video-screen .osd .progress .bar .chapter-marker.chapter-intro {
+  background: rgba(56, 189, 248, 0.44);
+  border-left-color: rgba(125, 211, 252, 0.96);
+  border-right-color: rgba(125, 211, 252, 0.96);
+}
+
+#video-screen .osd .progress .bar .chapter-marker.chapter-credits {
+  background: rgba(168, 85, 247, 0.44);
+  border-left-color: rgba(216, 180, 254, 0.96);
+  border-right-color: rgba(216, 180, 254, 0.96);
+}
+
+#video-screen .osd .progress:hover .bar .chapter-marker.chapter-intro,
+#video-screen .osd .progress.hover-active .bar .chapter-marker.chapter-intro {
+  background: rgba(56, 189, 248, 0.58);
+}
+
+#video-screen .osd .progress:hover .bar .chapter-marker.chapter-credits,
+#video-screen .osd .progress.hover-active .bar .chapter-marker.chapter-credits {
+  background: rgba(168, 85, 247, 0.58);
 }
 
 #video-screen .osd .progress .bar #played {

@@ -535,8 +535,15 @@ window.settings = {
           case "videoquality":
             var options = settings.qualities;
             var method = function (value) {
-              session.storage.quality = value;
-              session.update();
+              if (
+                typeof player !== "undefined" &&
+                typeof player.setVideoQuality === "function"
+              ) {
+                player.setVideoQuality(value);
+              } else {
+                session.storage.quality = value;
+                session.update();
+              }
             };
             break;
           case "mature":
@@ -612,7 +619,7 @@ window.settings = {
           (typeof changelog !== "undefined" &&
             changelog.data &&
             changelog.data.version) ||
-          "v2.1.0";
+          "v2.2.0";
         return `
         <div id="about-panel">
           <div class="about-header">
@@ -656,12 +663,13 @@ window.settings = {
           <div class="about-section">
             <div class="about-section-title">Desktop Shortcuts</div>
             <div class="about-shortcuts-grid">
-              <div class="shortcut-item"><kbd>F9</kbd><span>Mini Floating Player</span></div>
-              <div class="shortcut-item"><kbd>F10</kbd><span>Smart Auto-PiP Pin</span></div>
+              <div class="shortcut-item"><kbd>F9 / F10</kbd><span>Mini Player / Auto-PiP</span></div>
               <div class="shortcut-item"><kbd>F11 / F</kbd><span>Fullscreen</span></div>
               <div class="shortcut-item"><kbd>Space</kbd><span>Play / Pause</span></div>
               <div class="shortcut-item"><kbd>J / L</kbd><span>Seek -10s / +10s</span></div>
-              <div class="shortcut-item"><kbd>M / Wheel</kbd><span>Mute &amp; Volume</span></div>
+              <div class="shortcut-item"><kbd>P / N</kbd><span>Prev / Next Episode</span></div>
+              <div class="shortcut-item"><kbd>Q</kbd><span>Video Quality</span></div>
+              <div class="shortcut-item"><kbd>T</kbd><span>Sleep Timer</span></div>
               <div class="shortcut-item"><kbd>[ / ]</kbd><span>Playback Speed</span></div>
               <div class="shortcut-item"><kbd>Ctrl+Shift+S</kbd><span>Capture Frame</span></div>
               <div class="shortcut-item"><kbd>C / E / S / Z</kbd><span>Subs / Eps / Skip / Aspect</span></div>

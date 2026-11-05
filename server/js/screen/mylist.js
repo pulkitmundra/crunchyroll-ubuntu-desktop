@@ -325,16 +325,23 @@ window.mylist = {
   },
 
   createItem: function (item, listId, listTitle) {
+    var isCompleted = Boolean(
+      item.duration && item.playhead && item.playhead >= item.duration
+    );
     var remMin =
       item.duration && item.playhead
         ? Math.max(1, Math.round(item.duration - item.playhead))
         : 0;
-    var playhead = item.playhead
-      ? `<div class="progress" style="width: ${Math.min(
-          100,
-          (item.playhead * 100) / item.duration
-        )}%" value="${remMin}m"></div>`
-      : "";
+    var progressLabel = isCompleted
+      ? mylist.escapeHtml(translate.go("home.episodes.watched"))
+      : remMin + "m";
+    var playhead =
+      item.playhead && item.duration
+        ? `<div class="progress" style="width: ${Math.max(
+            0,
+            Math.min(100, (item.playhead * 100) / item.duration)
+          )}%" value="${progressLabel}"></div>`
+        : "";
     var badges =
       typeof mapper !== "undefined" && mapper.formatCardBadges
         ? mapper.formatCardBadges(item)
@@ -520,6 +527,9 @@ window.mylist = {
       var extraEl = $(`#${mylist.id} .details .information .extra-info`)[0];
       if (extraEl && typeof mapper !== "undefined" && mapper.formatMetaBadges) {
         extraEl.innerHTML = `<div class="cr-meta-row" id="generic-meta-row">${mapper.formatMetaBadges(item)}</div>`;
+        if (typeof mapper.triggerHeroEnrichment === "function") {
+          mapper.triggerHeroEnrichment(item, "generic-meta-row", 200);
+        }
       }
     } catch (error) {
       console.log(error);
