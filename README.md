@@ -256,6 +256,27 @@ crunchyroll-ubuntu-desktop/
 
 ---
 
+<a id="faq"></a>
+## ❓ Frequently Asked Questions (Linux, Ubuntu & Steam Deck)
+
+### How do I watch Crunchyroll natively on Ubuntu, Debian, Fedora, Arch Linux, or Steam Deck?
+Install via the Snap Store (`sudo snap install crunchyroll-ubuntu-desktop`) or run the one-command installer (`./install.sh`). Unlike a browser tab, **Crunchyroll Ubuntu Desktop** runs as a dedicated dark-themed desktop application with full mouse/trackpad support, keyboard shortcuts, an always-on-top Picture-in-Picture (`PiP`) mini-player that keeps anime subtitles visible, and GNOME/KDE MPRIS media key integration. On **Steam Deck**, you can install it in Desktop Mode and add `~/.local/bin/crunchyroll` (or the `.desktop` launcher) as a Non-Steam App for Game Mode.
+
+### How does this fix Crunchyroll Widevine DRM (`SHAK-6002` / Ubuntu 24.04 AppArmor) on Linux?
+Many older Electron wrappers fail on Crunchyroll with `SHAK-6002` DRM errors or crash on Ubuntu 24.04+ due to unprivileged user namespace AppArmor restrictions. This client uses the **Castlabs Electron for Content Security (`evs` / Widevine CDM)** runtime and automatically configures the sandbox flags and Widevine CDM handshake so 1080p streams play out of the box.
+
+---
+
+<a id="more-projects"></a>
+## 🔗 More Linux & Ubuntu Desktop Apps by Pulkit Mundra
+
+| Project | Description | Links |
+| :--- | :--- | :--- |
+| **[NVR Command Center](https://github.com/pulkitmundra/nvr-command-center)** | Ultra-low-latency GPU RTSP IP Camera, CCTV, NVR/DVR/XVR & Cloud P2P Surveillance Viewer for Linux/Ubuntu in Native Rust (Dahua SmartPSS/DMSS, CP Plus KVMS/gCMOB, Hikvision iVMS-4200, Amcrest, ONVIF) | [GitHub](https://github.com/pulkitmundra/nvr-command-center) · [Snap Store](https://snapcraft.io/nvr-command-center) |
+| **[Galaxy Buds Ubuntu Switcher](https://github.com/pulkitmundra/galaxy-buds-ubuntu)** | Universal Samsung Galaxy Buds (`Buds3 Pro`, `Buds2 Pro`, `Buds FE`, `Buds2`, `Buds Pro`, `Buds Live`, `Buds+`) GNOME 45-48 Quick Settings Switcher, Live Battery %, A2DP/HFP Toggle & Android Call Auto-Handoff | [GitHub](https://github.com/pulkitmundra/galaxy-buds-ubuntu) |
+
+---
+
 <a id="author"></a>
 ## 👨🏻‍💻 Author, Support & Contact
 
