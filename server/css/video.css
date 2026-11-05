@@ -654,7 +654,7 @@ body.compact-window #video-screen .osd .progress .bar {
   height: 16px;
 }
 
-#video-screen .osd .progress:hover .bar,
+#video-screen .osd .progress .bar:hover,
 #video-screen .osd .progress.hover-active .bar,
 body.scrubbing-progress #video-screen .osd .progress .bar {
   height: 0.95rem;
@@ -662,7 +662,7 @@ body.scrubbing-progress #video-screen .osd .progress .bar {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5), 0 3px 12px rgba(0, 0, 0, 0.55);
 }
 
-body.compact-window #video-screen .osd .progress:hover .bar,
+body.compact-window #video-screen .osd .progress .bar:hover,
 body.compact-window #video-screen .osd .progress.hover-active .bar,
 body.compact-window.scrubbing-progress #video-screen .osd .progress .bar {
   height: 28px;
@@ -682,7 +682,7 @@ body.compact-window.scrubbing-progress #video-screen .osd .progress .bar {
   transition: opacity 0.15s ease;
 }
 
-#video-screen .osd .progress:hover .bar #seek-hover,
+#video-screen .osd .progress .bar:hover #seek-hover,
 #video-screen .osd .progress.hover-active .bar #seek-hover,
 body.scrubbing-progress #video-screen .osd .progress .bar #seek-hover {
   opacity: 1;
@@ -720,12 +720,12 @@ body.scrubbing-progress #video-screen .osd .progress .bar #seek-hover {
   border-right-color: rgba(216, 180, 254, 0.96);
 }
 
-#video-screen .osd .progress:hover .bar .chapter-marker.chapter-intro,
+#video-screen .osd .progress .bar:hover .chapter-marker.chapter-intro,
 #video-screen .osd .progress.hover-active .bar .chapter-marker.chapter-intro {
   background: rgba(56, 189, 248, 0.58);
 }
 
-#video-screen .osd .progress:hover .bar .chapter-marker.chapter-credits,
+#video-screen .osd .progress .bar:hover .chapter-marker.chapter-credits,
 #video-screen .osd .progress.hover-active .bar .chapter-marker.chapter-credits {
   background: rgba(168, 85, 247, 0.58);
 }
@@ -742,7 +742,7 @@ body.scrubbing-progress #video-screen .osd .progress .bar #seek-hover {
   transition: box-shadow 0.18s ease;
 }
 
-#video-screen .osd .progress:hover .bar #played,
+#video-screen .osd .progress .bar:hover #played,
 #video-screen .osd .progress.hover-active .bar #played,
 body.scrubbing-progress #video-screen .osd .progress .bar #played {
   box-shadow: 0 0 18px rgba(244, 117, 33, 0.8);
@@ -772,7 +772,7 @@ body.compact-window #video-screen .osd .progress .bar #played::after {
   border-width: 6px;
 }
 
-#video-screen .osd .progress:hover .bar #played::after,
+#video-screen .osd .progress .bar:hover #played::after,
 #video-screen .osd .progress.hover-active .bar #played::after {
   transform: translate(50%, -50%) scale(1);
 }
@@ -814,7 +814,7 @@ body.compact-window #video-screen .osd .progress .bar #seek-tooltip {
   bottom: calc(100% + 26px);
 }
 
-#video-screen .osd .progress:hover .bar #seek-tooltip.visible,
+#video-screen .osd .progress .bar:hover #seek-tooltip.visible,
 #video-screen .osd .progress.hover-active .bar #seek-tooltip.visible,
 body.scrubbing-progress #video-screen .osd .progress .bar #seek-tooltip.visible {
   opacity: 1;
@@ -833,139 +833,304 @@ body.scrubbing-progress #video-screen .osd .progress .bar #seek-tooltip.visible 
   width: 100%;
 }
 
-#video-screen .osd .progress #osd-volume {
-  display: flex;
+#video-screen .osd .progress .osd-popup-control {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  background: rgba(16, 16, 22, 0.76);
-  border: 1.5px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  padding: 0.55rem 1rem;
+  justify-content: center;
   margin-left: 0.35rem;
-  backdrop-filter: blur(8px);
-  cursor: pointer;
   user-select: none;
+}
+
+body.compact-window #video-screen .osd .progress .osd-popup-control {
+  margin-left: 10px;
+}
+
+#video-screen .osd .progress .osd-popup-control .osd-round-btn {
+  position: relative;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(18px, calc(18px * var(--ui-scale, 1)), 28px);
+  width: clamp(46px, calc(46px * var(--ui-scale, 1)), 68px);
+  height: clamp(46px, calc(46px * var(--ui-scale, 1)), 68px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: clamp(12px, calc(12px * var(--ui-scale, 1)), 18px);
+  background: rgba(14, 14, 20, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: clamp(1px, calc(1px * var(--ui-scale, 1)), 2px) solid
+    rgba(255, 255, 255, 0.16);
+  padding: 0;
+  cursor: pointer;
   transition:
-    border-color 0.16s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
     background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
     box-shadow 0.16s ease;
 }
 
-body.compact-window #video-screen .osd .progress #osd-volume {
-  padding: 16px 28px;
-  gap: 18px;
+body.compact-window #video-screen .osd .progress .osd-popup-control .osd-round-btn {
+  width: 82px;
+  height: 82px;
+  font-size: 36px;
+  border-radius: 22px;
   border-width: 3px;
 }
 
-#video-screen .osd .progress #osd-volume:hover,
-body.scrubbing-volume #video-screen .osd .progress #osd-volume {
-  border-color: rgba(244, 117, 33, 0.8);
-  background: rgba(22, 22, 30, 0.92);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65);
+#video-screen .osd .progress .osd-popup-control:hover .osd-round-btn,
+#video-screen .osd .progress #osd-opacity.translucent-active .osd-round-btn,
+body.scrubbing-volume #video-screen .osd .progress #osd-volume .osd-round-btn,
+body.scrubbing-opacity #video-screen .osd .progress #osd-opacity .osd-round-btn {
+  color: #ffffff;
+  background: rgba(244, 117, 33, 0.22);
+  border-color: rgba(244, 117, 33, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
 }
 
-#video-screen .osd .progress #osd-volume #btn-volume-mute {
-  color: #fff;
-  font-size: 1.25rem;
-  width: 1.6rem;
-  text-align: center;
-  cursor: pointer;
-  transition: color 0.15s ease, transform 0.15s ease;
+#video-screen .osd .progress #osd-volume.muted-active .osd-round-btn {
+  border-color: rgba(255, 107, 107, 0.78);
 }
 
-body.compact-window #video-screen .osd .progress #osd-volume #btn-volume-mute {
-  font-size: 36px;
-  width: 44px;
-}
-
-#video-screen .osd .progress #osd-volume #btn-volume-mute.muted {
+#video-screen .osd .progress #osd-volume .osd-round-btn i.muted {
   color: #ff6b6b;
 }
 
-#video-screen .osd .progress #osd-volume #btn-volume-mute:hover {
+#video-screen .osd .progress #osd-opacity .osd-round-btn i.translucent {
   color: #f47521;
-  transform: scale(1.12);
 }
 
-#video-screen .osd .progress #osd-volume #volume-bar {
-  width: 92px;
-  height: 7px;
+#video-screen .osd .progress .osd-popup-control .osd-round-btn .setting-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #f47521;
+  color: #000000;
+  font-family: "Lato", sans-serif;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+}
+
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-round-btn
+  .setting-badge {
+  top: -8px;
+  right: -8px;
+  padding: 3px 9px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+#video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-round-btn
+  .setting-badge:empty {
+  display: none;
+}
+
+#video-screen .osd .progress .osd-popup-control .osd-standing-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px) scale(0.94);
+  width: 54px;
+  padding: 12px 10px 14px;
+  border-radius: 16px;
+  background: rgba(14, 14, 20, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 25;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.16s ease,
+    border-color 0.16s ease;
+}
+
+#video-screen .osd .progress .osd-popup-control .osd-standing-popover::after {
+  content: "";
+  position: absolute;
+  left: -14px;
+  right: -14px;
+  top: 100%;
+  height: 28px;
+  pointer-events: none;
+}
+
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-popover {
+  bottom: calc(100% + 10px);
+  width: 96px;
+  padding: 20px 16px 24px;
+  border-radius: 26px;
+  border-width: 3px;
+  gap: 18px;
+}
+
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-popover::after {
+  left: -20px;
+  right: -20px;
+  height: 36px;
+}
+
+#video-screen .osd .progress .osd-popup-control:hover .osd-standing-popover,
+#video-screen .osd .progress .osd-popup-control.popover-open .osd-standing-popover,
+body.scrubbing-volume #video-screen .osd .progress #osd-volume .osd-standing-popover,
+body.scrubbing-opacity #video-screen .osd .progress #osd-opacity .osd-standing-popover {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  border-color: rgba(244, 117, 33, 0.75);
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+#video-screen .osd .progress .osd-popup-control:hover .osd-standing-popover::after,
+#video-screen .osd .progress .osd-popup-control.popover-open .osd-standing-popover::after,
+body.scrubbing-volume #video-screen .osd .progress #osd-volume .osd-standing-popover::after,
+body.scrubbing-opacity #video-screen .osd .progress #osd-opacity .osd-standing-popover::after {
+  pointer-events: auto !important;
+}
+
+#video-screen .osd .progress .osd-popup-control .osd-standing-label {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.86rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-label {
+  font-size: 26px;
+}
+
+#video-screen .osd .progress .osd-popup-control .osd-standing-track {
+  width: 8px;
+  height: 124px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.24);
   position: relative;
   cursor: pointer;
-  overflow: visible;
+  display: flex;
+  align-items: flex-end;
   transition:
-    height 0.16s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.16s ease;
+    width 0.15s ease,
+    background-color 0.15s ease;
 }
 
-body.compact-window #video-screen .osd .progress #osd-volume #volume-bar {
-  width: 150px;
-  height: 14px;
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-track {
+  width: 16px;
+  height: 210px;
 }
 
-#video-screen .osd .progress #osd-volume:hover #volume-bar,
-body.scrubbing-volume #video-screen .osd .progress #osd-volume #volume-bar {
-  height: 11px;
+#video-screen .osd .progress .osd-popup-control .osd-standing-popover:hover .osd-standing-track,
+body.scrubbing-volume #video-screen .osd .progress #osd-volume .osd-standing-track,
+body.scrubbing-opacity #video-screen .osd .progress #osd-opacity .osd-standing-track {
+  width: 11px;
   background: rgba(255, 255, 255, 0.34);
 }
 
-body.compact-window #video-screen .osd .progress #osd-volume:hover #volume-bar,
-body.compact-window.scrubbing-volume #video-screen .osd .progress #osd-volume #volume-bar {
-  height: 22px;
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-popover:hover
+  .osd-standing-track,
+body.compact-window.scrubbing-volume
+  #video-screen
+  .osd
+  .progress
+  #osd-volume
+  .osd-standing-track,
+body.compact-window.scrubbing-opacity
+  #video-screen
+  .osd
+  .progress
+  #osd-opacity
+  .osd-standing-track {
+  width: 22px;
 }
 
-#video-screen .osd .progress #osd-volume #volume-fill {
-  height: 100%;
+#video-screen .osd .progress .osd-popup-control .osd-standing-fill {
   width: 100%;
+  height: 100%;
   border-radius: 999px;
   position: relative;
-  background: linear-gradient(90deg, #e8630a 0%, #f47521 55%, #ff9d52 100%);
-  box-shadow: 0 0 8px rgba(244, 117, 33, 0.45);
+  background: linear-gradient(0deg, #e8630a 0%, #f47521 55%, #ff9d52 100%);
+  box-shadow: 0 0 10px rgba(244, 117, 33, 0.5);
 }
 
-#video-screen .osd .progress #osd-volume #volume-fill::after {
+#video-screen .osd .progress .osd-popup-control .osd-standing-fill::after {
   content: "";
   position: absolute;
-  right: -7px;
-  top: 50%;
+  top: -7px;
+  left: 50%;
   width: 15px;
   height: 15px;
   border-radius: 50%;
   background: #ff9d52;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), 0 0 8px rgba(244, 117, 33, 0.75);
-  transform: translateY(-50%) scale(0);
-  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75), 0 0 8px rgba(244, 117, 33, 0.8);
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
-body.compact-window #video-screen .osd .progress #osd-volume #volume-fill::after {
-  right: -14px;
+body.compact-window
+  #video-screen
+  .osd
+  .progress
+  .osd-popup-control
+  .osd-standing-fill::after {
+  top: -14px;
   width: 28px;
   height: 28px;
   border-width: 4px;
-}
-
-#video-screen .osd .progress #osd-volume:hover #volume-fill::after,
-body.scrubbing-volume #video-screen .osd .progress #osd-volume #volume-fill::after {
-  transform: translateY(-50%) scale(1);
-}
-
-#video-screen .osd .progress #osd-volume #volume-label {
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 1rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  min-width: 2.9rem;
-  text-align: right;
-  pointer-events: none;
-}
-
-body.compact-window #video-screen .osd .progress #osd-volume #volume-label {
-  font-size: 32px;
-  min-width: 82px;
 }
 
 #video-screen .next-episode {

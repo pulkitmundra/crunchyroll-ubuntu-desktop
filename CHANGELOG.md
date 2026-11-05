@@ -2,6 +2,21 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.3.0] - 2026-11-05
+
+### Added
+- **See-Through Player Window Translucency (`20%` - `100%`) (`index.js`, `preload.js`, `css/app.css`, `server/js/screen/video.js`, `js/app.js`):**
+  - Enabled 32-bit ARGB window visual (`transparent: true` on `BrowserWindow`) and added `setWindowOpacity` / `getWindowOpacity` IPC bridges plus CSS root-canvas transparency (`html, body { background: transparent !important; }` with `#000` backdrop moved to `body::before`) so lowering player translucency composites the entire Crunchyroll player window with your underlying code editor, terminal, or browser on Linux/Ubuntu.
+  - Added GNOME Wayland / XWayland fullscreen black-curtain bypass (`wasFullScreenBeforeTranslucent` in `index.js`): when lowering opacity below `100%` while fullscreen, automatically transitions out of exclusive `_NET_WM_STATE_FULLSCREEN` into full work-area bounds (`getFullWorkAreaBounds`) so the compositor renders the desktop behind the video, and restores fullscreen when returning to `100%` opacity or exiting the player.
+  - Scoped window translucency strictly to the video player (`body.player-active` via `window.syncPlayerOpacityContext` in `video.init()` and `video.destroy()`): leaving the player or reopening the app always restores `100%` solid opacity (`cr_window_opacity` is cleared on startup).
+  - Temporarily forces `100%` opacity (`body.capturing-screenshot` override + `setWindowOpacity(1.0)`) during `Ctrl + Shift + S` frame captures so saved PNGs are never washed out.
+- **Standing Vertical Popover Sliders & Circular Icon Buttons for Volume & Translucency (`server/js/screen/video.js`, `server/css/video.css`, `js/app.js`):**
+  - Replaced the horizontal bottom-bar sliders with compact top-right style circular buttons (`.osd-round-btn` inside `.osd-popup-control`) featuring live status badges (`#volume-badge`, `#opacity-badge`) that highlight in orange when muted or translucent (`< 100%`).
+  - Added frosted-glass standing vertical popover sliders (`.osd-standing-popover`, `.osd-standing-track`, `.osd-standing-fill`) that open upward on hover or drag with click-to-mute / click-to-toggle-translucency (`100%` <-> `65%` or last translucent level), vertical drag scrubbing, and `5%` mouse-wheel adjustment.
+  - Added an interactive CSS hover bridge (`.osd-standing-popover::after`), expanded bounding-box pointer tracking (`isPointerInPopupControl`), a `220ms` close grace timer, sibling popover auto-dismissal so adjacent Volume and Translucency popovers never overlap, OSD idle-hide protection while hovering or scrubbing a popover, and isolated seek-bar hover expansion.
+
+---
+
 ## [v2.2.0] - 2026-11-05
 
 ### Added

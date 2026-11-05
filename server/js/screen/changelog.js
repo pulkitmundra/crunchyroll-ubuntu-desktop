@@ -1,8 +1,13 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.2.0",
+    version: "v2.3.0",
     changes: [
+      {
+        title: "See-Through Player Translucency (20% - 100%) & Standing Vertical Sliders",
+        description:
+          "Make the entire player window see-through while watching anime so you can read or code in your editor or browser behind the video (automatically restores 100% outside the player and on app reopen), paired with compact top-right style circular buttons and standing vertical popover sliders for Volume and Translucency.",
+      },
       {
         title: "In-Player Video Quality, Sleep Timer, Chapter Markers & Airing Status",
         description:
@@ -12,11 +17,6 @@ window.changelog = {
         title: "GNOME Media Keys, Frame Capture, Season Switcher & History Controls",
         description:
           "Added Linux/GNOME MediaSession (MPRIS) integration, HUD-free frame capture (Ctrl+Shift+S), in-drawer season switcher, custom list rename, watch history removal, recent searches, episode watched toggles, and subtitle appearance settings.",
-      },
-      {
-        title: "Delete Custom List Confirmation Dialog & Toast Notifications",
-        description:
-          "Added a safety confirmation modal before deleting any Custom List, a Delete List button on My List row headers, empty-name validation on Create & Add, and confirmation toasts across all Watchlist and Custom List actions.",
       },
     ],
   },

@@ -702,6 +702,19 @@ function setupFloatingToolbar() {
     var ms = typeof delayMs === "number" ? delayMs : 2000;
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(function () {
+      if (
+        isVideoActive() &&
+        (document.body.classList.contains("scrubbing-progress") ||
+          document.body.classList.contains("scrubbing-volume") ||
+          document.body.classList.contains("scrubbing-opacity") ||
+          document.querySelector(
+            ".osd-popup-control:hover, .osd-popup-control.popover-open, #top-center-dock:hover"
+          ))
+      ) {
+        window.lastUserActivityAt = Date.now();
+        scheduleUnifiedHide(ms);
+        return;
+      }
       forceHideAllOverlays();
     }, ms);
   }
@@ -895,10 +908,81 @@ function getContentHeight(el) {
   return Math.max(span, el.scrollHeight || 0);
 }
 
+(function initWindowOpacityController() {
+  var currentOpacity = 1;
+  var lastTranslucentOpacity = 0.7;
+  var inPlayerContext = false;
+  try {
+    localStorage.removeItem("cr_window_opacity");
+    localStorage.removeItem("cr_window_last_translucent_opacity");
+  } catch (_) {}
+
+  function applyDomAndNativeOpacity() {
+    var effectiveOpacity = inPlayerContext ? currentOpacity : 1;
+    if (document && document.documentElement) {
+      document.documentElement.style.setProperty("--cr-window-opacity", String(effectiveOpacity));
+    }
+    if (
+      window.electronUtilsRender &&
+      typeof window.electronUtilsRender.setWindowOpacity === "function"
+    ) {
+      try {
+        window.electronUtilsRender.setWindowOpacity(effectiveOpacity);
+      } catch (_) {}
+    }
+    if (typeof video !== "undefined" && typeof video.syncOpacityUI === "function") {
+      video.syncOpacityUI();
+    }
+  }
+
+  window.syncPlayerOpacityContext = function (active) {
+    inPlayerContext = Boolean(active);
+    applyDomAndNativeOpacity();
+  };
+
+  window.getAppOpacity = function () {
+    return currentOpacity;
+  };
+
+  window.setAppOpacity = function (rawVal) {
+    var num = Number(rawVal);
+    if (!isFinite(num)) return currentOpacity;
+    var clamped = Math.max(0.2, Math.min(1, Math.round(num * 100) / 100));
+    currentOpacity = clamped;
+    if (clamped < 0.99) {
+      lastTranslucentOpacity = clamped;
+    }
+    inPlayerContext =
+      Boolean(document && document.body && document.body.classList.contains("player-active")) ||
+      Boolean(document && document.getElementById("video-screen"));
+    applyDomAndNativeOpacity();
+    return currentOpacity;
+  };
+
+  window.adjustAppOpacity = function (delta) {
+    var next = Math.round((currentOpacity + (Number(delta) || 0)) * 100) / 100;
+    return window.setAppOpacity(next);
+  };
+
+  window.toggleAppOpacity = function () {
+    if (currentOpacity < 0.99) {
+      return window.setAppOpacity(1);
+    }
+    var target =
+      isFinite(lastTranslucentOpacity) && lastTranslucentOpacity >= 0.2 && lastTranslucentOpacity < 0.99
+        ? lastTranslucentOpacity
+        : 0.7;
+    return window.setAppOpacity(target);
+  };
+
+  applyDomAndNativeOpacity();
+})();
+
 function setupMouseSupport() {
   var videoClickTimer = null;
   var isDraggingProgress = false;
   var isDraggingVolume = false;
+  var isDraggingOpacity = false;
   var justFinishedScrubbing = false;
   var menuEnteredByMouse = false;
 
@@ -973,41 +1057,57 @@ function setupMouseSupport() {
   }
 
   function isPointInVolumeSliderZone(e) {
-    if (!e) return false;
-    if (e.target && e.target.closest && e.target.closest("#btn-volume-mute")) {
+    if (!e || !e.target || !e.target.closest) return false;
+    if (e.target.closest("#btn-volume-mute")) {
       return false;
     }
-    var osdVolEl = document.getElementById("osd-volume");
-    if (!osdVolEl) return false;
-    if (e.target && e.target.closest && e.target.closest("#osd-volume")) {
-      return true;
-    }
-    var rect = osdVolEl.getBoundingClientRect();
-    if (!rect.width) return false;
-    var muteBtn = document.getElementById("btn-volume-mute");
-    var minX = muteBtn ? muteBtn.getBoundingClientRect().right + 2 : rect.left + 28;
-    return (
-      e.clientX >= minX &&
-      e.clientX <= rect.right + 6 &&
-      e.clientY >= rect.top - 8 &&
-      e.clientY <= rect.bottom + 8
-    );
+    var popEl = document.getElementById("volume-popover");
+    if (!popEl) return false;
+    return Boolean(e.target.closest("#volume-popover") || e.target.closest("#volume-bar"));
   }
 
-  function setVolumeAtClientX(clientX) {
+  function setVolumeAtClientY(clientY) {
     if (typeof player === "undefined" || typeof video === "undefined") return;
     var volBarEl = document.getElementById("volume-bar");
     if (!volBarEl) return;
     var vRect = volBarEl.getBoundingClientRect();
-    if (!vRect.width) return;
-    var vRatio = Math.max(0, Math.min(1, (clientX - vRect.left) / vRect.width));
+    if (!vRect.height) return;
+    var vRatio = Math.max(0, Math.min(1, (vRect.bottom - clientY) / vRect.height));
     player.setVolume(vRatio);
+    video.showOSD();
+  }
+
+  function isPointInOpacitySliderZone(e) {
+    if (!e || !e.target || !e.target.closest) return false;
+    if (e.target.closest("#btn-opacity-toggle")) {
+      return false;
+    }
+    var popEl = document.getElementById("opacity-popover");
+    if (!popEl) return false;
+    return Boolean(e.target.closest("#opacity-popover") || e.target.closest("#opacity-bar"));
+  }
+
+  function setOpacityAtClientY(clientY) {
+    if (typeof video === "undefined") return;
+    var opBarEl = document.getElementById("opacity-bar");
+    if (!opBarEl) return;
+    var oRect = opBarEl.getBoundingClientRect();
+    if (!oRect.height) return;
+    var oRatio = Math.max(0, Math.min(1, (oRect.bottom - clientY) / oRect.height));
+    var targetOpacity = 0.2 + oRatio * 0.8;
+    if (typeof window.setAppOpacity === "function") {
+      window.setAppOpacity(targetOpacity);
+    }
     video.showOSD();
   }
 
   function isPointInProgressHitZone(barEl, e) {
     if (!barEl || !e) return false;
-    if (e.target && e.target.closest && e.target.closest("#osd-volume")) {
+    if (
+      e.target &&
+      e.target.closest &&
+      (e.target.closest("#osd-volume") || e.target.closest("#osd-opacity"))
+    ) {
       return false;
     }
     if (e.target && e.target.closest && e.target.closest(".osd .progress .bar")) {
@@ -1059,9 +1159,51 @@ function setupMouseSupport() {
         if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
           video.abortAutoSkip();
         }
+        var volCtrl = document.getElementById("osd-volume");
+        var opCtrlOther = document.getElementById("osd-opacity");
+        if (volCtrl) {
+          if (volCtrl._closePopTimer) {
+            clearTimeout(volCtrl._closePopTimer);
+            volCtrl._closePopTimer = null;
+          }
+          volCtrl.classList.add("popover-open");
+        }
+        if (opCtrlOther) {
+          if (opCtrlOther._closePopTimer) {
+            clearTimeout(opCtrlOther._closePopTimer);
+            opCtrlOther._closePopTimer = null;
+          }
+          opCtrlOther.classList.remove("popover-open");
+        }
         isDraggingVolume = true;
         document.body.classList.add("scrubbing-volume");
-        setVolumeAtClientX(e.clientX);
+        setVolumeAtClientY(e.clientY);
+        e.preventDefault();
+        return;
+      }
+      if (osdVisible && isPointInOpacitySliderZone(e)) {
+        if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
+          video.abortAutoSkip();
+        }
+        var opCtrl = document.getElementById("osd-opacity");
+        var volCtrlOther = document.getElementById("osd-volume");
+        if (opCtrl) {
+          if (opCtrl._closePopTimer) {
+            clearTimeout(opCtrl._closePopTimer);
+            opCtrl._closePopTimer = null;
+          }
+          opCtrl.classList.add("popover-open");
+        }
+        if (volCtrlOther) {
+          if (volCtrlOther._closePopTimer) {
+            clearTimeout(volCtrlOther._closePopTimer);
+            volCtrlOther._closePopTimer = null;
+          }
+          volCtrlOther.classList.remove("popover-open");
+        }
+        isDraggingOpacity = true;
+        document.body.classList.add("scrubbing-opacity");
+        setOpacityAtClientY(e.clientY);
         e.preventDefault();
         return;
       }
@@ -1080,7 +1222,12 @@ function setupMouseSupport() {
 
   window.addEventListener("mousemove", function (e) {
     if (isDraggingVolume) {
-      setVolumeAtClientX(e.clientX);
+      setVolumeAtClientY(e.clientY);
+      return;
+    }
+
+    if (isDraggingOpacity) {
+      setOpacityAtClientY(e.clientY);
       return;
     }
 
@@ -1100,6 +1247,52 @@ function setupMouseSupport() {
     ) {
       var osdEl = document.getElementById("osd");
       var osdVisible = !osdEl || osdEl.style.opacity == 1;
+      if (osdVisible) {
+        ["osd-volume", "osd-opacity"].forEach(function (ctrlId) {
+          var ctrlEl = document.getElementById(ctrlId);
+          if (!ctrlEl) return;
+          var popEl = ctrlEl.querySelector(".osd-standing-popover");
+          var btnEl = ctrlEl.querySelector(".osd-round-btn");
+          var inDomTarget = Boolean(e.target && e.target.closest && e.target.closest("#" + ctrlId));
+          var inBridgeZone = false;
+          if (!inDomTarget && btnEl && popEl && ctrlEl.classList.contains("popover-open")) {
+            var bRect = btnEl.getBoundingClientRect();
+            var pRect = popEl.getBoundingClientRect();
+            var minX = Math.min(bRect.left, pRect.left) - 16;
+            var maxX = Math.max(bRect.right, pRect.right) + 16;
+            var minY = pRect.top - 14;
+            var maxY = bRect.bottom + 14;
+            inBridgeZone =
+              e.clientX >= minX &&
+              e.clientX <= maxX &&
+              e.clientY >= minY &&
+              e.clientY <= maxY;
+          }
+          if (inDomTarget || inBridgeZone) {
+            if (ctrlEl._closePopTimer) {
+              clearTimeout(ctrlEl._closePopTimer);
+              ctrlEl._closePopTimer = null;
+            }
+            ctrlEl.classList.add("popover-open");
+            if (inDomTarget) {
+              var otherId = ctrlId === "osd-volume" ? "osd-opacity" : "osd-volume";
+              var otherEl = document.getElementById(otherId);
+              if (otherEl) {
+                if (otherEl._closePopTimer) {
+                  clearTimeout(otherEl._closePopTimer);
+                  otherEl._closePopTimer = null;
+                }
+                otherEl.classList.remove("popover-open");
+              }
+            }
+          } else if (ctrlEl.classList.contains("popover-open") && !ctrlEl._closePopTimer) {
+            ctrlEl._closePopTimer = setTimeout(function () {
+              ctrlEl._closePopTimer = null;
+              ctrlEl.classList.remove("popover-open");
+            }, 220);
+          }
+        });
+      }
       var hoverBarEl = osdVisible && document.querySelector(".osd .progress .bar");
       if (hoverBarEl && isPointInProgressHitZone(hoverBarEl, e)) {
         updateProgressHover(hoverBarEl, e.clientX, true);
@@ -1145,8 +1338,38 @@ function setupMouseSupport() {
     if (isDraggingVolume) {
       justFinishedScrubbing = true;
       document.body.classList.remove("scrubbing-volume");
+      var vCtrl = document.getElementById("osd-volume");
+      if (vCtrl) {
+        vCtrl.classList.add("popover-open");
+        if (!e || !e.target || !e.target.closest || !e.target.closest("#osd-volume")) {
+          if (vCtrl._closePopTimer) clearTimeout(vCtrl._closePopTimer);
+          vCtrl._closePopTimer = setTimeout(function () {
+            vCtrl._closePopTimer = null;
+            vCtrl.classList.remove("popover-open");
+          }, 220);
+        }
+      }
       setTimeout(function () {
         isDraggingVolume = false;
+        justFinishedScrubbing = false;
+      }, 60);
+    }
+    if (isDraggingOpacity) {
+      justFinishedScrubbing = true;
+      document.body.classList.remove("scrubbing-opacity");
+      var oCtrl = document.getElementById("osd-opacity");
+      if (oCtrl) {
+        oCtrl.classList.add("popover-open");
+        if (!e || !e.target || !e.target.closest || !e.target.closest("#osd-opacity")) {
+          if (oCtrl._closePopTimer) clearTimeout(oCtrl._closePopTimer);
+          oCtrl._closePopTimer = setTimeout(function () {
+            oCtrl._closePopTimer = null;
+            oCtrl.classList.remove("popover-open");
+          }, 220);
+        }
+      }
+      setTimeout(function () {
+        isDraggingOpacity = false;
         justFinishedScrubbing = false;
       }, 60);
     }
@@ -1599,12 +1822,19 @@ function setupMouseSupport() {
             langCol.scrollTop += dy;
           }
         } else if (typeof player !== "undefined") {
+          var inOpacity = target && target.closest && target.closest("#osd-opacity");
           var inProgress =
             target &&
             target.closest &&
             target.closest(".osd .progress") &&
-            !target.closest("#osd-volume");
-          if (inProgress) {
+            !target.closest("#osd-volume") &&
+            !inOpacity;
+          if (inOpacity && Math.abs(dy) > 0) {
+            if (typeof window.adjustAppOpacity === "function") {
+              window.adjustAppOpacity(dy < 0 ? 0.05 : -0.05);
+            }
+            video.showOSD();
+          } else if (inProgress) {
             if (typeof video.isAutoSkipping === "function" && video.isAutoSkipping()) {
               video.abortAutoSkip();
             }
@@ -2132,11 +2362,30 @@ function setupMouseSupport() {
       }
 
       if (osdVisible && isPointInVolumeSliderZone(e)) {
-        setVolumeAtClientX(e.clientX);
+        setVolumeAtClientY(e.clientY);
         return;
       }
 
       if (osdVisible && target.closest("#osd-volume")) {
+        video.showOSD();
+        return;
+      }
+
+      var opacityToggleBtn = osdVisible && target.closest("#btn-opacity-toggle");
+      if (opacityToggleBtn) {
+        if (typeof window.toggleAppOpacity === "function") {
+          window.toggleAppOpacity();
+        }
+        video.showOSD();
+        return;
+      }
+
+      if (osdVisible && isPointInOpacitySliderZone(e)) {
+        setOpacityAtClientY(e.clientY);
+        return;
+      }
+
+      if (osdVisible && target.closest("#osd-opacity")) {
         video.showOSD();
         return;
       }

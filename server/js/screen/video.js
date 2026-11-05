@@ -871,9 +871,14 @@ window.video = {
     if (!v) return;
     var muted = Boolean(v.muted || v.volume === 0);
     var pct = muted ? 0 : Math.round((typeof v.volume === "number" ? v.volume : 1) * 100);
-    var iconEl = document.getElementById("btn-volume-mute");
+    var wrapEl = document.getElementById("osd-volume");
+    var iconEl = document.getElementById("icon-volume-mute") || document.getElementById("btn-volume-mute");
+    var badgeEl = document.getElementById("volume-badge");
     var fillEl = document.getElementById("volume-fill");
     var lblEl = document.getElementById("volume-label");
+    if (wrapEl) {
+      wrapEl.classList.toggle("muted-active", muted || pct === 0);
+    }
     if (iconEl) {
       if (muted || pct === 0) {
         iconEl.className = "fa-solid fa-volume-xmark muted";
@@ -883,11 +888,46 @@ window.video = {
         iconEl.className = "fa-solid fa-volume-high";
       }
     }
+    if (badgeEl) {
+      badgeEl.textContent = muted || pct === 0 ? "Mute" : pct < 100 ? pct + "%" : "";
+    }
     if (fillEl) {
-      fillEl.style.width = pct + "%";
+      fillEl.style.height = pct + "%";
     }
     if (lblEl) {
       lblEl.textContent = muted ? "Muted" : pct + "%";
+    }
+  },
+
+  syncOpacityUI: function () {
+    var op =
+      typeof window.getAppOpacity === "function"
+        ? window.getAppOpacity()
+        : 1;
+    var pct = Math.max(20, Math.min(100, Math.round(op * 100)));
+    var fillPct = Math.max(0, Math.min(100, Math.round(((op - 0.2) / 0.8) * 100)));
+    var wrapEl = document.getElementById("osd-opacity");
+    var iconEl = document.getElementById("icon-opacity-toggle") || document.getElementById("btn-opacity-toggle");
+    var badgeEl = document.getElementById("opacity-badge");
+    var fillEl = document.getElementById("opacity-fill");
+    var lblEl = document.getElementById("opacity-label");
+    var isTranslucent = pct < 100;
+    if (wrapEl) {
+      wrapEl.classList.toggle("translucent-active", isTranslucent);
+    }
+    if (iconEl) {
+      iconEl.className = isTranslucent
+        ? "fa-solid fa-droplet translucent"
+        : "fa-solid fa-droplet";
+    }
+    if (badgeEl) {
+      badgeEl.textContent = isTranslucent ? pct + "%" : "";
+    }
+    if (fillEl) {
+      fillEl.style.height = fillPct + "%";
+    }
+    if (lblEl) {
+      lblEl.textContent = pct + "%";
     }
   },
 
@@ -959,12 +999,29 @@ window.video = {
             <div id="seek-tooltip">00:00</div>
           </div>
           <div id="total">00:00:00</div>
-          <div id="osd-volume" title="Click icon to Mute (M) or scroll wheel for Volume">
-            <i id="btn-volume-mute" class="fa-solid fa-volume-high"></i>
-            <div id="volume-bar">
-              <div id="volume-fill"></div>
+          <div id="osd-volume" class="osd-popup-control">
+            <div class="osd-standing-popover" id="volume-popover">
+              <span class="osd-standing-label" id="volume-label">100%</span>
+              <div class="osd-standing-track" id="volume-bar">
+                <div class="osd-standing-fill" id="volume-fill"></div>
+              </div>
             </div>
-            <span id="volume-label">100%</span>
+            <button type="button" id="btn-volume-mute" class="osd-round-btn" title="Volume / Mute (M)">
+              <i id="icon-volume-mute" class="fa-solid fa-volume-high"></i>
+              <span class="setting-badge" id="volume-badge"></span>
+            </button>
+          </div>
+          <div id="osd-opacity" class="osd-popup-control">
+            <div class="osd-standing-popover" id="opacity-popover">
+              <span class="osd-standing-label" id="opacity-label">100%</span>
+              <div class="osd-standing-track" id="opacity-bar">
+                <div class="osd-standing-fill" id="opacity-fill"></div>
+              </div>
+            </div>
+            <button type="button" id="btn-opacity-toggle" class="osd-round-btn" title="Player Translucency">
+              <i id="icon-opacity-toggle" class="fa-solid fa-droplet"></i>
+              <span class="setting-badge" id="opacity-badge"></span>
+            </button>
           </div>
         </div>
       </div>
@@ -1018,10 +1075,15 @@ window.video = {
       </div>
     </div>`;
     document.body.appendChild(video_element);
+    document.body.classList.add("player-active");
+    if (typeof window.syncPlayerOpacityContext === "function") {
+      window.syncPlayerOpacityContext(true);
+    }
     if (typeof player !== "undefined" && typeof player.applySubtitlePrefs === "function") {
       player.applySubtitlePrefs();
     }
     video.syncVolumeUI();
+    video.syncOpacityUI();
     video.syncQualityUI();
     video.syncSleepUI();
 
@@ -1035,10 +1097,15 @@ window.video = {
   destroy: function () {
     video._playReqId = (video._playReqId || 0) + 1;
     document.body.classList.remove(
+      "player-active",
       "scrubbing-progress",
       "scrubbing-volume",
+      "scrubbing-opacity",
       "capturing-screenshot"
     );
+    if (typeof window.syncPlayerOpacityContext === "function") {
+      window.syncPlayerOpacityContext(false);
+    }
     video.clearAutoSkip(true);
     video.clearSleepCountdown();
     video.clearMediaSession();
@@ -2718,7 +2785,9 @@ window.video = {
     video.timers.osd.object = setTimeout(() => {
       if (
         document.body.classList.contains("scrubbing-progress") ||
-        document.body.classList.contains("scrubbing-volume")
+        document.body.classList.contains("scrubbing-volume") ||
+        document.body.classList.contains("scrubbing-opacity") ||
+        document.querySelector(".osd-popup-control:hover, .osd-popup-control.popover-open")
       ) {
         video.showOSD(noHide);
         return;
@@ -2749,6 +2818,14 @@ window.video = {
     }
     if (video.sleep && video.sleep.state) {
       video.hideSleepTimer();
+    }
+    var popCtrls = document.querySelectorAll(".osd-popup-control");
+    for (var p = 0; p < popCtrls.length; p++) {
+      if (popCtrls[p]._closePopTimer) {
+        clearTimeout(popCtrls[p]._closePopTimer);
+        popCtrls[p]._closePopTimer = null;
+      }
+      popCtrls[p].classList.remove("popover-open");
     }
     var osds = document.querySelectorAll("#osd, #video-screen .osd");
     for (var i = 0; i < osds.length; i++) {
@@ -2862,7 +2939,13 @@ window.video = {
     var osd = document.getElementById("osd");
     var isScrubbing =
       document.body.classList.contains("scrubbing-progress") ||
-      document.body.classList.contains("scrubbing-volume");
+      document.body.classList.contains("scrubbing-volume") ||
+      document.body.classList.contains("scrubbing-opacity") ||
+      Boolean(
+        document.querySelector(
+          ".osd-popup-control:hover, .osd-popup-control.popover-open"
+        )
+      );
     var drawerOpen = Boolean(
       video.settings.open ||
         (video.episodesDrawer && video.episodesDrawer.open) ||

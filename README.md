@@ -20,7 +20,7 @@ $ crunchyroll --ozone-platform=x11
 
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/stargazers"><img src="https://img.shields.io/github/stars/pulkitmundra/crunchyroll-ubuntu-desktop?style=social" alt="GitHub Stars" /></a>&nbsp;
-  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.2.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
+  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.3.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
   <a href="https://github.com/pulkitmundra"><img src="https://img.shields.io/badge/Maintainer-%40pulkitmundra-181717?style=flat&logo=github" alt="Maintainer" /></a>&nbsp;
   <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>&nbsp;
   <a href="https://buymeacoffee.com/pulkitmundra"><img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>&nbsp;
@@ -60,7 +60,8 @@ The upstream `crunchyroll-linux` / `crunchyroll-tizen` project was built strictl
 | **Skip Intro, Skip Recap & Skip Credits + `3.2s` Auto-Skip** | `[ ]` | `[x]` |
 | **In-Player Season Episode List Drawer (`E`)** | `[ ]` | `[x]` |
 | **Click-to-Play & Double-Click Fullscreen (`F` / `F11`)** | `[ ]` | `[x]` |
-| **Hover-Preview Scrubber, `5s` Wheel Seek & Full-Pill Volume Drag** | `[ ]` | `[x]` |
+| **Hover-Preview Scrubber, `5s` Wheel Seek & Standing Vertical Volume/Translucency Popovers** | `[ ]` | `[x]` |
+| **See-Through Player Window Translucency (`20%` - `100%`, Player-Only)** | `[ ]` | `[x]` |
 | **Synchronized Cursor + HUD Auto-Hide (Video Player Only)** | `[ ]` | `[x]` |
 | **Floating Mini-Player (`560x315`, `F9`) & Scaled PiP Controls** | `[ ]` | `[x]` |
 | **Smart Auto-PiP on `Alt + Tab` (`F10`)** | `[ ]` | `[x]` |
@@ -97,9 +98,10 @@ flowchart LR
   - Configurable **Playback & Auto-Skip** toggles in **Settings** (`Auto-Skip Intro`, `Auto-Skip Credits`, `Auto-Skip Recap`, `Auto-Play Next Episode`, `Show Skip Buttons`). When Auto-Skip is enabled for a segment, the skip pill displays a smooth **`3.2s` animated progress fill** from left to right; clicking anywhere else in the player window (or pressing `Esc` / `Backspace` / `Space`) aborts the auto-skip countdown for that segment without interrupting playback.
 - **In-Player Season Episode List Drawer (`E`)**:
   - Click the **Episodes** icon in the player OSD or press `E` to slide out a frosted glass drawer listing all episodes in the current season with thumbnails, watch progress bars, `Sub | Dub` badges, and 1-click episode switching without leaving the player.
-- **Hover-Preview Timeline Scrubber, Chapter Markers & Full-Pill Volume Slider**:
+- **Hover-Preview Timeline Scrubber, Chapter Markers & Standing Vertical Volume/Translucency Popover Sliders**:
   - Sleek `5px` progress track that expands to `12px` on hover with a glowing circular thumb, ghost hover-fill bar (`#seek-hover`), color-coded **Recap / Intro / Credits** chapter markers (`#chapter-markers`), floating timestamp + chapter preview (`#seek-tooltip`), click-and-drag scrubbing, and `5s` mouse-wheel timeline seeking.
-  - Click-and-drag volume scrubbing across the entire `#osd-volume` pill container, live in-player **Video Quality** selector (`Auto` with live resolution badge, `1080p`, `720p`, `480p`, `360p`, `240p` via `Q`), **Sleep Timer / Auto-Pause** (`1 Ep`, `2 Ep`, `3 Ep`, `30m`, `60m` via `T`), and **Playback Speed** control (`0.25x` - `2x` via `[` / `]`).
+  - Compact top-right style circular buttons (`.osd-round-btn`) with live status badges (`#volume-badge`, `#opacity-badge`) that open standing vertical popover sliders (`.osd-standing-popover`) on hover for **Volume** (`0%` - `100%`) and **See-Through Player Translucency** (`20%` - `100%`, scoped strictly to the video player so you can see your code editor or browser behind the video while watching, and automatically restored to `100%` on other screens and on app reopen).
+  - Live in-player **Video Quality** selector (`Auto` with live resolution badge, `1080p`, `720p`, `480p`, `360p`, `240p` via `Q`), **Sleep Timer / Auto-Pause** (`1 Ep`, `2 Ep`, `3 Ep`, `30m`, `60m` via `T`), and **Playback Speed** control (`0.25x` - `2x` via `[` / `]`).
 - **Synchronized Auto-Hide HUD & Cursor**:
   - Scoped strictly to `#video-screen` so the cursor never disappears on non-video screens, and automatically stays visible whenever the Audio/Subtitles drawer, Episodes drawer, Sidebar Menu, or Exit modal is open.
 
@@ -204,7 +206,8 @@ chmod +x install.sh
 | **Toggle Mini Float Window** | Click **Mini Float** in top dock | `F9` or `Ctrl + M` |
 | **Toggle Pin on Top / Auto-PiP** | Click **Pin on Top** in top dock | `F10` or `Ctrl + T` |
 | **Seek `5s` / `10s`** | Click/drag timeline or scroll wheel on bar | `Left` / `Right` (`5s`), `J` / `L` (`10s`) |
-| **Volume / Mute** | Click/drag `#osd-volume` pill or wheel | `Up` / `Down` Arrow, `M` (Mute) |
+| **Volume / Mute** | Hover `#osd-volume` standing slider, click icon to mute, or scroll wheel | `Up` / `Down` Arrow, `M` (Mute) |
+| **Player Translucency (`20%` - `100%`)** | Hover `#osd-opacity` standing slider, click icon to toggle, or scroll wheel | - |
 | **Video Quality (`Auto` - `1080p`)** | Click **Quality** (`fa-sliders`) in OSD | `Q` |
 | **Sleep Timer / Auto-Pause** | Click **Sleep Timer** (`fa-moon`) in OSD | `T` |
 | **Playback Speed (`0.25x` - `2x`)** | Click **Speed** (`fa-gauge-high`) in OSD | `[` (Slower) / `]` (Faster) |
@@ -229,7 +232,7 @@ crunchyroll-ubuntu-desktop/
 ├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen & screenshot IPC)
 ├── preload.js                    # Electron preload bridge (pointer/hover telemetry & window IPC)
 ├── index.html                    # Outer Electron shell
-├── package.json                  # Package metadata (v2.2.0)
+├── package.json                  # Package metadata (v2.3.0)
 ├── install.sh                    # Automated installer (downloads Castlabs Widevine runtime & links repo)
 ├── CHANGELOG.md                  # Full release history & audit changelog
 ├── LICENSE                       # ISC License

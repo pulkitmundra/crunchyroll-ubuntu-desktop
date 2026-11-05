@@ -619,7 +619,7 @@ window.settings = {
           (typeof changelog !== "undefined" &&
             changelog.data &&
             changelog.data.version) ||
-          "v2.2.0";
+          "v2.3.0";
         return `
         <div id="about-panel">
           <div class="about-header">

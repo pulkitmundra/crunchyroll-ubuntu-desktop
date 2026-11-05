@@ -5,6 +5,9 @@ const fs = require("fs");
 
 let isMiniPlayer = false;
 let isPinned = false;
+let currentWindowOpacity = 1;
+let wasFullScreenBeforeTranslucent = false;
+let translucentFsTimer = null;
 let savedBounds = null;
 let lastFloatingBounds = null;
 let wasFullScreenBeforeMini = true;
@@ -38,7 +41,7 @@ function notifyMode(win) {
   win.webContents.send("windowModeChanged", {
     isMiniPlayer,
     isPinned,
-    isFullScreen: win.isFullScreen(),
+    isFullScreen: win.isFullScreen() || wasFullScreenBeforeTranslucent,
     isCompact,
     scale,
   });
@@ -146,7 +149,8 @@ function shrinkToFloatingWindow(win, targetWidth = 560, targetHeight = 315) {
   lastShrinkTime = Date.now();
   isHoveringWindow = false;
 
-  wasFullScreenBeforeMini = win.isFullScreen();
+  wasFullScreenBeforeMini = win.isFullScreen() || wasFullScreenBeforeTranslucent;
+  wasFullScreenBeforeTranslucent = false;
   wasMaximizedBeforeMini = !wasFullScreenBeforeMini && win.isMaximized();
   if (!wasFullScreenBeforeMini && !wasMaximizedBeforeMini) {
     const cur = win.getBounds();
@@ -222,7 +226,13 @@ function expandFromFloatingToFull(win, keepPinned = true) {
   }
 
   if (wasFullScreenBeforeMini) {
-    win.setFullScreen(true);
+    if (currentWindowOpacity < 0.99) {
+      wasFullScreenBeforeTranslucent = true;
+      win.setBounds(getFullWorkAreaBounds(win));
+    } else {
+      wasFullScreenBeforeTranslucent = false;
+      win.setFullScreen(true);
+    }
   } else if (wasMaximizedBeforeMini && !keepPinned) {
     win.maximize();
   } else if (keepPinned || wasMaximizedBeforeMini) {
@@ -241,7 +251,13 @@ function expandFromFloatingToFull(win, keepPinned = true) {
   setTimeout(() => {
     if (!win.isDestroyed()) {
       if (wasFullScreenBeforeMini && !win.isFullScreen() && !isMiniPlayer) {
-        win.setFullScreen(true);
+        if (currentWindowOpacity < 0.99) {
+          wasFullScreenBeforeTranslucent = true;
+          win.setBounds(getFullWorkAreaBounds(win));
+        } else {
+          wasFullScreenBeforeTranslucent = false;
+          win.setFullScreen(true);
+        }
       }
       updateZoom(win);
     }
@@ -262,7 +278,7 @@ function toggleMiniPlayerMode(win) {
   return {
     isMiniPlayer,
     isPinned,
-    isFullScreen: win.isFullScreen(),
+    isFullScreen: !isMiniPlayer && (win.isFullScreen() || wasFullScreenBeforeTranslucent),
     isCompact: isMiniPlayer || b.width <= 720 || b.height <= 420,
     scale: isMiniPlayer ? 560 / 1920 : Math.max(0.15, Math.min(b.width / 1920, b.height / 1080)),
   };
@@ -291,7 +307,7 @@ function togglePinMode(win) {
   return {
     isMiniPlayer,
     isPinned,
-    isFullScreen: win.isFullScreen(),
+    isFullScreen: !isMiniPlayer && (win.isFullScreen() || wasFullScreenBeforeTranslucent),
     isCompact: isMiniPlayer || b.width <= 720 || b.height <= 420,
     scale: Math.max(0.15, Math.min(b.width / 1920, b.height / 1080)),
   };
@@ -304,9 +320,12 @@ function toggleFullScreenMode(win) {
   if (isMiniPlayer) {
     wasFullScreenBeforeMini = true;
     expandFromFloatingToFull(win, isPinned);
-  } else if (win.isFullScreen()) {
+  } else if (win.isFullScreen() || wasFullScreenBeforeTranslucent) {
     wasFullScreenBeforeMini = false;
-    win.setFullScreen(false);
+    wasFullScreenBeforeTranslucent = false;
+    if (win.isFullScreen()) {
+      win.setFullScreen(false);
+    }
     const targetNormal = isValidNormalBounds(savedBounds)
       ? savedBounds
       : getCenteredNormalBounds(win, 1280, 720);
@@ -332,7 +351,12 @@ function toggleFullScreenMode(win) {
       }
     }
     wasFullScreenBeforeMini = true;
-    win.setFullScreen(true);
+    if (currentWindowOpacity < 0.99) {
+      wasFullScreenBeforeTranslucent = true;
+      win.setBounds(getFullWorkAreaBounds(win));
+    } else {
+      win.setFullScreen(true);
+    }
     setTimeout(() => {
       if (!win.isDestroyed()) {
         updateZoom(win);
@@ -343,7 +367,7 @@ function toggleFullScreenMode(win) {
   return {
     isMiniPlayer,
     isPinned,
-    isFullScreen: win.isFullScreen(),
+    isFullScreen: win.isFullScreen() || wasFullScreenBeforeTranslucent,
     isCompact: isMiniPlayer || win.getContentBounds().width < 1000,
   };
 }
@@ -357,6 +381,7 @@ function createWindow() {
   const win = new BrowserWindow({
     fullscreen: false,
     autoHideMenuBar: true,
+    transparent: true,
     width: 1280,
     height: 720,
     minWidth: 320,
@@ -374,7 +399,12 @@ function createWindow() {
   if (startFullScreen) {
     setTimeout(() => {
       if (!win.isDestroyed() && !isMiniPlayer) {
-        win.setFullScreen(true);
+        if (currentWindowOpacity < 0.99) {
+          wasFullScreenBeforeTranslucent = true;
+          win.setBounds(getFullWorkAreaBounds(win));
+        } else {
+          win.setFullScreen(true);
+        }
         updateZoom(win);
       }
     }, 100);
@@ -401,7 +431,12 @@ function createWindow() {
 
   win.webContents.on("did-finish-load", () => {
     if (startFullScreen && !isMiniPlayer && !win.isFullScreen()) {
-      win.setFullScreen(true);
+      if (currentWindowOpacity < 0.99) {
+        wasFullScreenBeforeTranslucent = true;
+        win.setBounds(getFullWorkAreaBounds(win));
+      } else {
+        win.setFullScreen(true);
+      }
     }
     updateZoom(win);
     notifyMode(win);
@@ -455,7 +490,12 @@ function createWindow() {
       focusRestoreTimer = null;
     }
     updateZoom(win);
-    if (!isTransitioning && !win.isMaximized() && !win.isFullScreen()) {
+    if (
+      !isTransitioning &&
+      !win.isMaximized() &&
+      !win.isFullScreen() &&
+      !wasFullScreenBeforeTranslucent
+    ) {
       const b = win.getBounds();
       if (isMiniPlayer) {
         if (Date.now() - lastShrinkTime > 380 && isValidMiniBounds(b)) {
@@ -482,7 +522,12 @@ function createWindow() {
       clearTimeout(focusRestoreTimer);
       focusRestoreTimer = null;
     }
-    if (!isTransitioning && !win.isMaximized() && !win.isFullScreen()) {
+    if (
+      !isTransitioning &&
+      !win.isMaximized() &&
+      !win.isFullScreen() &&
+      !wasFullScreenBeforeTranslucent
+    ) {
       const b = win.getBounds();
       if (isMiniPlayer) {
         if (Date.now() - lastShrinkTime > 380) {
@@ -609,6 +654,57 @@ function createWindow() {
     if (!isTrustedSender(event)) return null;
     return toggleFullScreenMode(win);
   });
+  ipcMain.handle("setWindowOpacity", (event, rawValue) => {
+    if (!isTrustedSender(event) || !win || win.isDestroyed()) return null;
+    const num = Number(rawValue);
+    if (!Number.isFinite(num)) return { opacity: currentWindowOpacity };
+    const clamped = Math.max(0.2, Math.min(1, Math.round(num * 100) / 100));
+    currentWindowOpacity = clamped;
+    try {
+      if (clamped < 0.99 && win.isFullScreen()) {
+        wasFullScreenBeforeTranslucent = true;
+        isTransitioning = true;
+        if (translucentFsTimer) {
+          clearTimeout(translucentFsTimer);
+          translucentFsTimer = null;
+        }
+        win.setFullScreen(false);
+        translucentFsTimer = setTimeout(() => {
+          translucentFsTimer = null;
+          if (!win.isDestroyed() && !isMiniPlayer && currentWindowOpacity < 0.99) {
+            win.setBounds(getFullWorkAreaBounds(win));
+            updateZoom(win);
+          }
+          isTransitioning = false;
+        }, 55);
+      } else if (clamped >= 0.99 && wasFullScreenBeforeTranslucent) {
+        wasFullScreenBeforeTranslucent = false;
+        if (!isMiniPlayer && !win.isFullScreen()) {
+          isTransitioning = true;
+          if (translucentFsTimer) {
+            clearTimeout(translucentFsTimer);
+            translucentFsTimer = null;
+          }
+          win.setFullScreen(true);
+          translucentFsTimer = setTimeout(() => {
+            translucentFsTimer = null;
+            if (!win.isDestroyed()) {
+              updateZoom(win);
+            }
+            isTransitioning = false;
+          }, 55);
+        }
+      }
+      if (typeof win.setOpacity === "function") {
+        win.setOpacity(clamped);
+      }
+    } catch (_) {}
+    return { opacity: currentWindowOpacity };
+  });
+  ipcMain.handle("getWindowOpacity", (event) => {
+    if (!isTrustedSender(event) || !win || win.isDestroyed()) return { opacity: 1 };
+    return { opacity: currentWindowOpacity };
+  });
   ipcMain.handle("captureScreenshot", async (event, meta) => {
     if (!isTrustedSender(event) || !win || win.isDestroyed()) {
       return { ok: false, error: "Window unavailable" };
@@ -670,9 +766,12 @@ function createWindow() {
           if (win.isAlwaysOnTop()) {
             applyAlwaysOnTop(win, false);
           }
-          if (win.isFullScreen()) {
+          if (win.isFullScreen() || wasFullScreenBeforeTranslucent) {
             wasFullScreenBeforeMini = false;
-            win.setFullScreen(false);
+            wasFullScreenBeforeTranslucent = false;
+            if (win.isFullScreen()) {
+              win.setFullScreen(false);
+            }
             const normalBounds = isValidNormalBounds(savedBounds)
               ? savedBounds
               : getCenteredNormalBounds(win, 1280, 720);

@@ -21,6 +21,7 @@ description: |
   * Watch History management (remove single episodes or clear history)
   * Subtitle appearance customization (size, color, background opacity, edge style)
   * In-player Video Quality selector (Q), Sleep Timer / Auto-Pause (T) & Timeline Chapter Markers
+  * See-through Player Window Translucency (20% - 100%) & Standing Vertical Volume/Translucency Popovers
   * HUD-free 1080p video frame screenshot capture (Ctrl+Shift+S)
 
   Support the Project:

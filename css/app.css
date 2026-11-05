@@ -17,6 +17,11 @@
     U+FEFF, U+FFFD;
 }
 
+html,
+body {
+  background: transparent !important;
+}
+
 body {
   cursor: default;
   font-family: "Lato";
@@ -25,7 +30,24 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #000;
+  opacity: 1;
+}
+
+body.player-active:not(.capturing-screenshot) {
+  opacity: var(--cr-window-opacity, 1);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: -1;
+  pointer-events: none;
+}
+
+body.capturing-screenshot {
+  opacity: 1 !important;
 }
 
 body.hide-cursor,

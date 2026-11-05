@@ -1,6 +1,6 @@
 {
   "name": "crunchyroll-linux",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Unofficial Ubuntu/Linux Desktop Client for Crunchyroll with Modernist Glassmorphic UI, Custom Lists, Auto-Skip HUD, Mouse/Trackpad & Smart Auto-PiP",
   "homepage": "https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop",
   "main": "index.js",
