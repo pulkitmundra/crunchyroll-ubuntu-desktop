@@ -45,8 +45,15 @@ window.main = {
   events: {
     logout: function () {
       const logout = () => {
-        if (typeof video !== "undefined" && document.getElementById(video.id)) {
-          video.destroy();
+        if (typeof video !== "undefined") {
+          if (typeof video.clearSleepCountdown === "function") {
+            video.clearSleepCountdown(false);
+          }
+          if (document.getElementById(video.id)) {
+            video.destroy();
+          } else if (typeof video.clearMediaSession === "function") {
+            video.clearMediaSession();
+          }
         }
         if (
           typeof home_episodes !== "undefined" &&
@@ -201,6 +208,14 @@ window.main = {
 
   /* on exit app */
   destroy: function () {
+    if (typeof video !== "undefined") {
+      if (typeof video.clearMediaSession === "function") {
+        video.clearMediaSession();
+      }
+      if (typeof video.clearSleepCountdown === "function") {
+        video.clearSleepCountdown(false);
+      }
+    }
     player.destroy();
   },
 

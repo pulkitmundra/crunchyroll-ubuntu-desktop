@@ -20,7 +20,7 @@ $ crunchyroll --ozone-platform=x11
 
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/stargazers"><img src="https://img.shields.io/github/stars/pulkitmundra/crunchyroll-ubuntu-desktop?style=social" alt="GitHub Stars" /></a>&nbsp;
-  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.3.0-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
+  <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.3.1-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
   <a href="https://github.com/pulkitmundra"><img src="https://img.shields.io/badge/Maintainer-%40pulkitmundra-181717?style=flat&logo=github" alt="Maintainer" /></a>&nbsp;
   <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>&nbsp;
   <a href="https://buymeacoffee.com/pulkitmundra"><img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>&nbsp;
@@ -76,12 +76,12 @@ The upstream `crunchyroll-linux` / `crunchyroll-tizen` project was built strictl
 <a id="architecture"></a>
 ## 🧠 Smart Auto-PiP & Window Architecture
 
-When **Pin on Top (`F10`)** is enabled, the Electron main process (`index.js`) and preload bridge (`preload.js`) coordinate focus, pointer telemetry, and dynamic zoom scaling (`1920x1080` -> `560x315`) so you can seamlessly multitask while watching:
+When **Pin on Top (`F10`)** is enabled, the Electron main process (`index.js`) and preload bridge (`preload.js`) coordinate focus state and dynamic zoom scaling (`1920x1080` -> `560x315`) so you can seamlessly multitask while watching:
 
 ```mermaid
 flowchart LR
     A["Watching Fullscreen / Maximized<br/>(Pin on Top F10 = ON)"] -->|"Alt + Tab / Click Another App<br/>(Window Blur)"| B["Auto-Shrink to 560x315<br/>Pinned Floating Mini-Player<br/>(Bottom-Right Corner)"]
-    B -->|"Alt + Tab Back or<br/>Click Ubuntu Dock Icon"| C["1-Step Auto-Restore<br/>to Fullscreen / Normal Size"]
+    B -->|"Press F9 / F11 or Click<br/>Expand (Exit Mini / Maximize)"| C["1-Step Restore<br/>to Fullscreen / Normal Size"]
     B -->|"Click / Scrub / Drag<br/>Inside Mini-Player"| D["Stays Compact in Mini-Player<br/>for Scrubbing or Play/Pause"]
 ```
 
@@ -114,7 +114,7 @@ flowchart LR
 - **Floating Mini-Player Mode (`F9` or `Ctrl + M`)**: Instantly shrinks the window into a compact `560x315` floating player in the bottom-right corner of your screen (and restores back to normal/fullscreen when toggled again), with XWayland/GNOME Mutter state enforcement so dragging and resizing the PiP window never locks up.
 - **Pin on Top & Smart Auto-PiP (`F10` or `Ctrl + T`)**:
   - When **Pin on Top** is enabled, switching focus away from Crunchyroll (`Alt + Tab` or clicking another app) automatically shrinks Crunchyroll into a pinned floating mini-player so you can keep watching while coding or browsing.
-  - Returning to Crunchyroll via `Alt + Tab` or clicking the Ubuntu Dock icon automatically expands it back to full size in one step, whereas clicking or dragging directly inside the mini-player keeps it compact.
+  - Clicking, scrubbing, or dragging directly inside the mini-player keeps it compact. Press `F9` (or `F11`) or click **Exit Mini** / **Maximize** (Expand) on the mini-player to restore back to full size in one step.
 - **Bounded `--ui-scale` Responsive Controls (`updateZoom` & `checkCompactWindow`)**: Automatically scales the `1920x1080` layout proportionally across any window size while applying a continuous, strictly capped `--ui-scale` multiplier to floating controls and compact PiP buttons so controls are easy to click in `560x315` PiP mode without becoming oversized at half-screen aspect ratios.
 
 </details>
@@ -230,9 +230,9 @@ chmod +x install.sh
 ```text
 crunchyroll-ubuntu-desktop/
 ├── index.js                      # Electron main process (window, mini-player, auto-PiP, fullscreen & screenshot IPC)
-├── preload.js                    # Electron preload bridge (pointer/hover telemetry & window IPC)
+├── preload.js                    # Electron preload bridge (context-isolated window, opacity & screenshot IPC)
 ├── index.html                    # Outer Electron shell
-├── package.json                  # Package metadata (v2.3.0)
+├── package.json                  # Package metadata (v2.3.1)
 ├── install.sh                    # Automated installer (downloads Castlabs Widevine runtime & links repo)
 ├── CHANGELOG.md                  # Full release history & audit changelog
 ├── LICENSE                       # ISC License

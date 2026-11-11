@@ -9,7 +9,17 @@ window.home = {
     state: false,
   },
 
+  unslick: function () {
+    var nodes = $("[id='home-screen'] .slick-initialized").get().reverse();
+    nodes.forEach(function (el) {
+      try {
+        $(el).slick("unslick");
+      } catch (_) {}
+    });
+  },
+
   init: function () {
+    home.unslick();
     $("[id='home-screen']").remove();
     home.position = 0;
     home._previewItem =
@@ -143,6 +153,7 @@ window.home = {
   destroy: function () {
     home.position = 0;
     home._previewItem = null;
+    home.unslick();
     $("[id='home-screen']").remove();
   },
 

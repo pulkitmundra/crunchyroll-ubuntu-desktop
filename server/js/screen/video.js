@@ -311,6 +311,20 @@ window.video = {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
       return;
     }
+    var actions = [
+      "play",
+      "pause",
+      "seekbackward",
+      "seekforward",
+      "seekto",
+      "nexttrack",
+      "previoustrack",
+    ];
+    for (var i = 0; i < actions.length; i++) {
+      try {
+        navigator.mediaSession.setActionHandler(actions[i], null);
+      } catch (e) {}
+    }
     try {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = "none";
@@ -936,7 +950,7 @@ window.video = {
     clearInterval(video.timers.next);
     clearInterval(video.timers.history.object);
     video.clearAutoSkip(true);
-    video.clearSleepCountdown();
+    video.clearSleepCountdown(true);
     $("[id='video-screen']").remove();
     video.settings.open = false;
     video.episodesDrawer.open = false;
@@ -1107,7 +1121,7 @@ window.video = {
       window.syncPlayerOpacityContext(false);
     }
     video.clearAutoSkip(true);
-    video.clearSleepCountdown();
+    video.clearSleepCountdown(true);
     video.clearMediaSession();
     video.hideOSD();
     document.body.classList.remove("hide-cursor");
@@ -1121,6 +1135,7 @@ window.video = {
       video.saveHistory(isNearEnd ? Math.floor(durSec) : undefined);
     }
     player.stop();
+    video.releasePendingSession();
     clearTimeout(video.timers.osd.object);
     clearInterval(video.timers.next);
     clearInterval(video.timers.history.object);
@@ -1569,6 +1584,53 @@ window.video = {
   },
 
   _playReqId: 0,
+  _pendingSessionRelease: null,
+
+  releasePendingSession: function () {
+    var pending = video._pendingSessionRelease;
+    if (!pending) return;
+    video._pendingSessionRelease = null;
+    if (
+      pending.id &&
+      pending.token &&
+      typeof player !== "undefined" &&
+      typeof player.deleteSession === "function"
+    ) {
+      player.deleteSession({
+        data: {
+          id: pending.id,
+          token: pending.token,
+        },
+      });
+    }
+  },
+
+  onPlaybackStarted: function (playSeq) {
+    var pending = video._pendingSessionRelease;
+    if (!pending) return;
+    if (
+      pending.reqId !== video._playReqId ||
+      pending.playSeq !== playSeq ||
+      (typeof player !== "undefined" && playSeq !== player._playSeq) ||
+      !document.getElementById(video.id)
+    ) {
+      return;
+    }
+    video._pendingSessionRelease = null;
+    if (
+      pending.id &&
+      pending.token &&
+      typeof player !== "undefined" &&
+      typeof player.deleteSession === "function"
+    ) {
+      player.deleteSession({
+        data: {
+          id: pending.id,
+          token: pending.token,
+        },
+      });
+    }
+  },
 
   play: function (item, noplay, forceSubtitle) {
     var reqId = (video._playReqId = (video._playReqId || 0) + 1);
@@ -1578,11 +1640,21 @@ window.video = {
     video.next.shown = false;
     video.clearAutoSkip(true);
     $("#skip-intro").hide();
-    if (typeof player !== "undefined" && player.video) {
-      try {
-        player.video.pause();
-      } catch (e) {}
+    if (typeof player !== "undefined") {
+      if (player.video) {
+        try {
+          player.video.pause();
+        } catch (e) {}
+      }
+      if (player.plugin) {
+        player._playSeq++;
+        try {
+          player.plugin.reset();
+        } catch (e) {}
+        player.plugin = null;
+      }
     }
+    video.releasePendingSession();
     if (video.episodesDrawer && video.episodesDrawer.open) {
       video.renderEpisodesDrawer();
     }
@@ -1593,15 +1665,28 @@ window.video = {
         id: item.id,
       },
       success: function (data) {
+        var sessionEpId = item.id;
+        var sessionToken = data && data.token;
         if (
           reqId !== video._playReqId ||
           video.episode !== item.id ||
           !document.getElementById(video.id)
         ) {
+          if (
+            sessionEpId &&
+            sessionToken &&
+            typeof player !== "undefined" &&
+            typeof player.deleteSession === "function"
+          ) {
+            player.deleteSession({
+              data: {
+                id: sessionEpId,
+                token: sessionToken,
+              },
+            });
+          }
           return;
         }
-        var sessionEpId = item.id;
-        var sessionToken = data && data.token;
         video.token = sessionToken;
         video.stopNext();
         video.setSkipIntro(item.id);
@@ -1650,6 +1735,15 @@ window.video = {
             item.duration && item.playhead >= item.duration ? 0 : item.playhead,
             noplay
           );
+          video._pendingSessionRelease =
+            sessionEpId && sessionToken
+              ? {
+                  reqId: reqId,
+                  playSeq: player._playSeq,
+                  id: sessionEpId,
+                  token: sessionToken,
+                }
+              : null;
           video.startHistory();
           video.setAudios();
           video.setSubtitles();
@@ -1658,16 +1752,6 @@ window.video = {
           console.log(error);
         }
 
-        if (sessionEpId && sessionToken) {
-          setTimeout(() => {
-            player.deleteSession({
-              data: {
-                id: sessionEpId,
-                token: sessionToken,
-              },
-            });
-          }, 3000);
-        }
         video.showOSD();
       },
       error: function (error) {
@@ -2577,7 +2661,16 @@ window.video = {
     }
   },
 
-  clearSleepCountdown: function () {
+  clearSleepCountdown: function (preserveWallClock) {
+    if (
+      preserveWallClock &&
+      video.sleep &&
+      video.sleep.endsAt > Date.now()
+    ) {
+      video.sleep.episodesLeft = 0;
+      video.sleep.state = false;
+      return;
+    }
     if (video.sleep && video.sleep.timerId) {
       clearInterval(video.sleep.timerId);
       video.sleep.timerId = null;
@@ -2682,12 +2775,14 @@ window.video = {
           video.sleep.active = "off";
           video.sleep.endsAt = 0;
           video.syncSleepUI();
-          if (typeof player !== "undefined") {
-            player.pause();
-          }
-          video.showOSD(true);
-          if (typeof window.showToast === "function") {
-            window.showToast("Sleep Timer: Playback paused", "info");
+          if (document.getElementById(video.id)) {
+            if (typeof player !== "undefined") {
+              player.pause();
+            }
+            video.showOSD(true);
+            if (typeof window.showToast === "function") {
+              window.showToast("Sleep Timer: Playback paused", "info");
+            }
           }
           return;
         }

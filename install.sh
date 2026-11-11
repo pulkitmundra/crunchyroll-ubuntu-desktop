@@ -55,7 +55,8 @@ fi
 chmod +x "$REPO_DIR/bin/crunchyroll"
 ln -sfn "$REPO_DIR/bin/crunchyroll" "$HOME/.local/bin/crunchyroll"
 
-sed "s|__HOME__|$HOME|g" "$REPO_DIR/bin/crunchyroll-linux.desktop" > "$HOME/.local/share/applications/crunchyroll-linux.desktop"
+ESCAPED_HOME="$(printf '%s' "$HOME" | sed 's/[\\&|]/\\&/g')"
+sed "s|__HOME__|${ESCAPED_HOME}|g" "$REPO_DIR/bin/crunchyroll-linux.desktop" > "$HOME/.local/share/applications/crunchyroll-linux.desktop"
 
 echo "[x] Installation complete!"
 echo "    - Launch from GNOME App Grid ('Crunchyroll') or run: crunchyroll"

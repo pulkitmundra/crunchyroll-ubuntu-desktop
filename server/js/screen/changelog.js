@@ -1,7 +1,7 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.3.0",
+    version: "v2.3.1",
     changes: [
       {
         title: "See-Through Player Translucency (20% - 100%) & Standing Vertical Sliders",

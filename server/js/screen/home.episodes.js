@@ -6,7 +6,17 @@ window.home_episodes = {
     episodes: NaN,
   },
 
+  unslick: function () {
+    var nodes = $(`.${home_episodes.id} .slick-initialized`).get().reverse();
+    nodes.forEach(function (el) {
+      try {
+        $(el).slick("unslick");
+      } catch (_) {}
+    });
+  },
+
   init: function (item) {
+    home_episodes.unslick();
     $(`.${home_episodes.id}`).remove();
     var episode_contents = document.createElement("div");
     episode_contents.className = `${home_episodes.id} ${home_episodes.id}_content`;
@@ -78,9 +88,13 @@ window.home_episodes = {
             return String(s == null ? "" : s);
           };
     $(".episodes .title")[0].innerText = `${season.title}`;
-    $(".episodes .episodes-list")[0].slick &&
-      $(".episodes .episodes-list")[0].slick.destroy();
-    $(".episodes .episodes-list")[0].innerHTML = "";
+    var epListEl = $(".episodes .episodes-list")[0];
+    if ($(epListEl).hasClass("slick-initialized")) {
+      try {
+        $(epListEl).slick("unslick");
+      } catch (_) {}
+    }
+    epListEl.innerHTML = "";
     loading.start();
     service.episodes({
       data: {
@@ -266,6 +280,7 @@ window.home_episodes = {
 
   destroy: function () {
     $(`body`).removeClass(`${home_episodes.id}`);
+    home_episodes.unslick();
     $(`.${home_episodes.id}`).remove();
     if (
       typeof home_details !== "undefined" &&

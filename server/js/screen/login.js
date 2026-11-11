@@ -7,6 +7,7 @@ window.login = {
   _capsKeyDownHandler: null,
   _capsKeyUpHandler: null,
   _capsMouseHandler: null,
+  _errorTimer: null,
 
   updateCapsBadge: function (isOn) {
     login.capsLockOn = Boolean(isOn);
@@ -144,6 +145,10 @@ window.login = {
 
   destroy: function () {
     login.isSubmitting = false;
+    if (login._errorTimer) {
+      clearTimeout(login._errorTimer);
+      login._errorTimer = null;
+    }
     if (login._capsKeyDownHandler) {
       window.removeEventListener("keydown", login._capsKeyDownHandler, true);
       login._capsKeyDownHandler = null;

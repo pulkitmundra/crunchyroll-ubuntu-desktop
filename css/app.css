@@ -33,6 +33,7 @@ body {
   opacity: 1;
 }
 
+/* Single-layer ARGB surface alpha for See-Through Player mode (native window opacity stays 1.0 to avoid X11/XWayland _NET_WM_WINDOW_OPACITY multiplication) */
 body.player-active:not(.capturing-screenshot) {
   opacity: var(--cr-window-opacity, 1);
 }

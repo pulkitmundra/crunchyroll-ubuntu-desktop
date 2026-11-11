@@ -4,7 +4,7 @@ window.session = {
     subtitles: {},
   },
   storage: {
-    version: "v2.0.1",
+    version: "",
     language: NaN,
     quality: "auto",
     account: {
@@ -61,14 +61,12 @@ window.session = {
         session.storage = storage || session.storage;
         if (session.storage && session.storage.account && "password" in session.storage.account) {
           delete session.storage.account.password;
+          session.update();
         }
       } catch (error) {
         console.log("error parse session.");
       }
     }
-    session.storage.version = "v2.0.0";
-
-    session.update();
   },
 
   start: function (username, password, callback) {
@@ -338,7 +336,12 @@ window.session = {
   },
 
   clear: function () {
+    var prevVersion =
+      session.storage && typeof session.storage.version === "string"
+        ? session.storage.version
+        : "";
     session.storage = {
+      version: prevVersion,
       language: "en-US",
       quality: "auto",
       account: {

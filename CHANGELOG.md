@@ -2,6 +2,14 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.3.1] - 2026-11-11
+
+### Fixed
+- **Linear Single-Layer See-Through Opacity (Wayland & X11):** Eliminated quadratic double-opacity dimming (`0.5 * 0.5 = 0.25`) by applying ARGB CSS alpha on Wayland sessions and `_NET_WM_WINDOW_OPACITY` on pure X11 sessions without stacking both layers simultaneously.
+- **Buffering Exit Cleanup (`player.js`):** Fixed orphaned `dash.js` background audio and segment downloads when pressing Back/Escape while a video is still buffering.
+- **Startup Changelog Persistence (`session.js`):** Removed the legacy `v2.0.0` startup overwrite so the "What's New" modal only opens once per release.
+- **Memory, Gamepad, MPRIS & Multi-Monitor Stability:** Unslicked carousels before screen teardown, stopped idle 60fps gamepad polling when disabled, clamped restored window/PiP bounds across multi-monitor changes, cleared `mediaSession` handlers on exit, preserved active sleep timers across episode switches, hardened renderer CSP & HTML escaping, and aligned `StartupWMClass` and `ISC` Snap metadata.
+
 ## [v2.3.0] - 2026-11-05
 
 ### Added

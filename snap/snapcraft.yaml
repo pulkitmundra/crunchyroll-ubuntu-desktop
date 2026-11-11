@@ -1,7 +1,7 @@
 name: crunchyroll-ubuntu-desktop
 title: Crunchyroll Desktop (Unofficial)
 adopt-info: crunchyroll-app
-license: GPL-3.0
+license: ISC
 website: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop
 source-code: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop
 issues: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues

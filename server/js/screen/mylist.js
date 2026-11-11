@@ -6,13 +6,40 @@ window.mylist = {
     lists: [],
   },
   selectedRow: 0,
+  _reqId: 0,
+
+  unslick: function () {
+    var nodes = $("[id='mylist-screen'] .slick-initialized").get().reverse();
+    nodes.forEach(function (el) {
+      try {
+        $(el).slick("unslick");
+      } catch (_) {}
+    });
+  },
 
   init: function () {
+    var reqId = ++mylist._reqId;
+    mylist.unslick();
+    $("[id='mylist-screen']").remove();
+    mylist.data.lists = [];
+    mylist.data.loadedLists = 0;
+    mylist.selectedRow = 0;
+
     var mylist_element = document.createElement("div");
     mylist_element.id = mylist.id;
+    main.state = mylist.id;
     loading.start();
     mylist.loadLists({
       success: function () {
+        var isActive =
+          main.state === mylist.id ||
+          (typeof menu !== "undefined" &&
+            menu.isOpen &&
+            menu.previous === mylist.id);
+        if (reqId !== mylist._reqId || !isActive) {
+          loading.end();
+          return;
+        }
         mylist_element.innerHTML = `
         <div class="content">
           <div class="details">
@@ -54,6 +81,15 @@ window.mylist = {
       },
       error: function (error) {
         console.log(error);
+        var isActive =
+          main.state === mylist.id ||
+          (typeof menu !== "undefined" &&
+            menu.isOpen &&
+            menu.previous === mylist.id);
+        if (reqId !== mylist._reqId || !isActive) {
+          loading.end();
+          return;
+        }
         mylist_element.innerHTML = `
         <div class="content">
           <div class="lists">
@@ -75,6 +111,7 @@ window.mylist = {
   },
 
   destroy: function () {
+    mylist._reqId++;
     if (typeof window.closeConfirmDialog === "function") {
       window.closeConfirmDialog();
     }
@@ -84,6 +121,7 @@ window.mylist = {
     mylist.data.lists = [];
     mylist.data.loadedLists = 0;
     mylist.selectedRow = 0;
+    mylist.unslick();
     $("[id='mylist-screen']").remove();
   },
 
@@ -169,6 +207,9 @@ window.mylist = {
         home_details.init(
           item,
           function (item) {
+            if (typeof home !== "undefined" && typeof home.unslick === "function") {
+              home.unslick();
+            }
             $("[id='home-screen']").remove();
             var home_element = document.createElement("div");
             home_element.id = home.id;

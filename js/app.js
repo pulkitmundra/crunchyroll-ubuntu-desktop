@@ -917,17 +917,41 @@ function getContentHeight(el) {
     localStorage.removeItem("cr_window_last_translucent_opacity");
   } catch (_) {}
 
+  var nativeOpacityHandled = false;
+
   function applyDomAndNativeOpacity() {
     var effectiveOpacity = inPlayerContext ? currentOpacity : 1;
     if (document && document.documentElement) {
-      document.documentElement.style.setProperty("--cr-window-opacity", String(effectiveOpacity));
+      document.documentElement.style.setProperty(
+        "--cr-window-opacity",
+        nativeOpacityHandled ? "1" : String(effectiveOpacity)
+      );
     }
     if (
       window.electronUtilsRender &&
       typeof window.electronUtilsRender.setWindowOpacity === "function"
     ) {
       try {
-        window.electronUtilsRender.setWindowOpacity(effectiveOpacity);
+        var res = window.electronUtilsRender.setWindowOpacity(effectiveOpacity);
+        if (res && typeof res.then === "function") {
+          res
+            .then(function (info) {
+              if (
+                info &&
+                typeof info.nativeHandled === "boolean" &&
+                info.nativeHandled !== nativeOpacityHandled
+              ) {
+                nativeOpacityHandled = info.nativeHandled;
+                if (document && document.documentElement) {
+                  document.documentElement.style.setProperty(
+                    "--cr-window-opacity",
+                    nativeOpacityHandled ? "1" : String(inPlayerContext ? currentOpacity : 1)
+                  );
+                }
+              }
+            })
+            .catch(function () {});
+        }
       } catch (_) {}
     }
     if (typeof video !== "undefined" && typeof video.syncOpacityUI === "function") {
@@ -949,7 +973,7 @@ function getContentHeight(el) {
     if (!isFinite(num)) return currentOpacity;
     var clamped = Math.max(0.2, Math.min(1, Math.round(num * 100) / 100));
     currentOpacity = clamped;
-    if (clamped < 0.99) {
+    if (clamped < 0.999) {
       lastTranslucentOpacity = clamped;
     }
     inPlayerContext =
@@ -965,11 +989,11 @@ function getContentHeight(el) {
   };
 
   window.toggleAppOpacity = function () {
-    if (currentOpacity < 0.99) {
+    if (currentOpacity < 0.999) {
       return window.setAppOpacity(1);
     }
     var target =
-      isFinite(lastTranslucentOpacity) && lastTranslucentOpacity >= 0.2 && lastTranslucentOpacity < 0.99
+      isFinite(lastTranslucentOpacity) && lastTranslucentOpacity >= 0.2 && lastTranslucentOpacity < 0.999
         ? lastTranslucentOpacity
         : 0.7;
     return window.setAppOpacity(target);

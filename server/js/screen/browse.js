@@ -5,13 +5,27 @@ window.browse = {
     main: [],
   },
 
+  _reqId: 0,
+
   init: function (selected) {
+    var reqId = ++browse._reqId;
+    $("[id='browse-screen']").remove();
     var browse_element = document.createElement("div");
     browse_element.id = browse.id;
+    main.state = browse.id;
 
     loading.start();
     service.categories({
       success: function (response) {
+        var isBrowseActive =
+          main.state === browse.id ||
+          (typeof menu !== "undefined" &&
+            menu.isOpen &&
+            menu.previous === browse.id);
+        if (reqId !== browse._reqId || !isBrowseActive) {
+          loading.end();
+          return;
+        }
         browse.data.categories = (response && response.items) || [];
         var elements = "";
         var esc =
@@ -64,14 +78,23 @@ window.browse = {
         browse.move("up");
       },
       error: function (error) {
+        var isBrowseActive =
+          main.state === browse.id ||
+          (typeof menu !== "undefined" &&
+            menu.isOpen &&
+            menu.previous === browse.id);
+        if (reqId !== browse._reqId || !isBrowseActive) {
+          loading.end();
+          return;
+        }
         loading.end();
         console.log(error);
       },
     });
-    main.state = browse.id;
   },
 
   destroy: function () {
+    browse._reqId++;
     $("[id='browse-screen']").remove();
   },
 

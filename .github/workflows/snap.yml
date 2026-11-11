@@ -99,9 +99,9 @@ jobs:
           chmod 0755 "$PRIME/bin/crunchyroll-desktop"
 
           VERSION="$(jq -r '.version' package.json)"
-          cat << YAML > "$PRIME/meta/snap.yaml"
+          cat << 'YAML' > "$PRIME/meta/snap.yaml"
           name: crunchyroll-ubuntu-desktop
-          version: ${VERSION}
+          version: __SNAP_VERSION__
           title: Crunchyroll Desktop (Unofficial)
           summary: Unofficial Linux desktop client for Crunchyroll with Widevine, PiP & MPRIS
           description: |
@@ -112,12 +112,13 @@ jobs:
             * Built-in Widevine DRM playback support via Castlabs Electron runtime
             * Glassmorphic dark UI with floating sidebar dock and smooth mouse/trackpad navigation
             * Smart Auto-PiP (Picture-in-Picture) mini-player when switching workspaces or windows
-            * In-player Episodes Drawer with instant \`<\` / \`>\` season switcher and watched indicators
+            * In-player Episodes Drawer with instant `<` / `>` season switcher and watched indicators
             * Native Linux desktop MPRIS media controls (keyboard play/pause/next/prev & lock-screen artwork)
             * Custom Lists (create, rename, delete) and Watchlist management with toast confirmations
             * Watch History management (remove single episodes or clear history)
             * Subtitle appearance customization (size, color, background opacity, edge style)
             * In-player Video Quality selector (Q), Sleep Timer / Auto-Pause (T) & Timeline Chapter Markers
+            * See-through Player Window Translucency (20% - 100%) & Standing Vertical Volume/Translucency Popovers
             * HUD-free 1080p video frame screenshot capture (Ctrl+Shift+S)
 
             Support the Project:
@@ -130,7 +131,7 @@ jobs:
             maintained, sponsored, or endorsed by Crunchyroll, LLC or Sony Pictures
             Entertainment. Crunchyroll and its logo are registered trademarks of
             Crunchyroll, LLC. A valid Crunchyroll account is required to stream content.
-          license: GPL-3.0
+          license: ISC
           base: core22
           grade: stable
           confinement: strict
@@ -151,6 +152,7 @@ jobs:
                 - home
                 - screen-inhibit-control
           YAML
+          sed -i "s/__SNAP_VERSION__/$VERSION/" "$PRIME/meta/snap.yaml"
 
           chmod -R a+rX,u+w,go-w "$PRIME"
           chmod -R a-s "$PRIME"
@@ -158,13 +160,17 @@ jobs:
             -noappend -comp lzo -all-root -no-xattrs -no-fragments >/dev/null
           ls -lh /tmp/crunchyroll-ubuntu-desktop.snap
 
-      - name: Upload & Release to Canonical Snap Store
-        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-          RELEASE_CHANNEL: ${{ inputs.channel || 'stable' }}
+      - name: Install Snap Store publishing dependencies
+        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         run: |
           pip install --quiet craft-store pymacaroons requests
+
+      - name: Upload & Release to Canonical Snap Store
+        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'edge' || inputs.channel || 'stable' }}
+        run: |
           python3 - << 'PY'
           import os, sys, time, requests
           from craft_store import creds as cs_creds

@@ -5,6 +5,6 @@ Exec=crunchyroll-ubuntu-desktop %U
 Terminal=false
 Type=Application
 Icon=${SNAP}/meta/gui/icon.png
-StartupWMClass=crunchyroll
+StartupWMClass=crunchyroll-linux
 Categories=AudioVideo;Video;Player;TV;
 Keywords=crunchyroll;anime;streaming;video;

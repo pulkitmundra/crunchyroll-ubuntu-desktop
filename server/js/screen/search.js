@@ -100,7 +100,18 @@ window.search = {
       `<button type="button" id="search-recent-clear" class="recent-clear-all" title="Clear all recent searches">Clear All</button>`;
   },
 
+  _liveTimer: null,
+
   init: function () {
+    if (search._liveTimer) {
+      clearTimeout(search._liveTimer);
+      search._liveTimer = null;
+    }
+    $("[id='search-screen']").remove();
+    search.position = -1;
+    search.last_postion = 0;
+    search.data.result = [];
+
     var search_element = document.createElement("div");
     search_element.id = search.id;
 
@@ -127,14 +138,17 @@ window.search = {
     var inputBox = document.getElementById("search-screen_input");
     search.input = inputBox ? inputBox.querySelector("input") : null;
     var clearBtn = document.getElementById("search-clear-btn");
-    var liveSearchTimer = null;
     if (search.input) {
       search.input.addEventListener("input", function () {
         if (clearBtn) {
           clearBtn.style.display = search.input.value.length > 0 ? "inline-flex" : "none";
         }
-        if (liveSearchTimer) clearTimeout(liveSearchTimer);
-        liveSearchTimer = setTimeout(function () {
+        if (search._liveTimer) {
+          clearTimeout(search._liveTimer);
+          search._liveTimer = null;
+        }
+        search._liveTimer = setTimeout(function () {
+          search._liveTimer = null;
           if (
             document.getElementById(search.id) &&
             search.input &&
@@ -151,9 +165,13 @@ window.search = {
     if (clearBtn && search.input) {
       clearBtn.addEventListener("click", function (e) {
         e.stopPropagation();
+        if (search._liveTimer) {
+          clearTimeout(search._liveTimer);
+          search._liveTimer = null;
+        }
         search.input.value = "";
         clearBtn.style.display = "none";
-        $(".list-container-over").html("");
+        $("#search-screen .list-container-over").html("");
         search.data.result = [];
         search.toggleFocus(-1);
         search.input.focus();
@@ -162,7 +180,13 @@ window.search = {
   },
 
   destroy: function () {
+    if (search._liveTimer) {
+      clearTimeout(search._liveTimer);
+      search._liveTimer = null;
+    }
+    search._reqId++;
     search.data.result = [];
+    search.input = null;
     $("[id='search-screen']").remove();
   },
 
@@ -181,13 +205,27 @@ window.search = {
         query: queryStr,
       },
       success: function (response) {
-        if (currentReq !== search._reqId) return;
+        if (currentReq !== search._reqId || !document.getElementById(search.id)) {
+          loading.end();
+          return;
+        }
         loading.end();
         search.data.result = mapper.search(response);
         var elements_content = "";
+        var esc =
+          typeof mapper !== "undefined" && mapper.escapeHtml
+            ? mapper.escapeHtml
+            : function (s) {
+                return String(s == null ? "" : s)
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#39;");
+              };
         if (!search.data.result || search.data.result.length === 0) {
-          $(".list-container-over").html(
-            `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${queryStr.replace(/[<>&"]/g, "")}"</div>`
+          $("#search-screen .list-container-over").html(
+            `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${esc(queryStr)}"</div>`
           );
           search.last_postion = 0;
           search.scroll_data.rows = 0;
@@ -196,12 +234,6 @@ window.search = {
         if (queryStr.length >= 3) {
           search.saveRecentSearch(queryStr);
         }
-        var esc =
-          typeof mapper !== "undefined" && mapper.escapeHtml
-            ? mapper.escapeHtml
-            : function (s) {
-                return String(s == null ? "" : s);
-              };
         search.data.result.forEach((element, index) => {
           var badges =
             typeof mapper !== "undefined" && mapper.formatCardBadges
@@ -217,9 +249,9 @@ window.search = {
               </div>`;
         });
 
-        $(".list-container-over").html(elements_content);
+        $("#search-screen .list-container-over").html(elements_content);
         search.last_postion = 0;
-        var firstItemEl = $(`.list-container-over .item`).get(0);
+        var firstItemEl = $(`#search-screen .list-container-over .item`).get(0);
         if (firstItemEl) {
           search.scroll_data.item_height =
             parseFloat(window.getComputedStyle(firstItemEl).height.replace("px", "")) || 390;
@@ -333,6 +365,9 @@ window.search = {
                   : function (s) {
                       return String(s == null ? "" : s);
                     };
+              if (typeof home !== "undefined" && typeof home.unslick === "function") {
+                home.unslick();
+              }
               $("[id='home-screen']").remove();
               var home_element = document.createElement("div");
               home_element.id = home.id;

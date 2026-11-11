@@ -6,6 +6,7 @@ window.player = {
     PAUSED: 2,
     FORWARD: 3,
     REWIND: 4,
+    BUFFERING: 5,
   },
   values: {
     forward_rewind: 0,
@@ -14,8 +15,8 @@ window.player = {
     forward_rewind: NaN,
   },
   state: -1,
-  plugin: NaN,
-  video: NaN,
+  plugin: null,
+  video: null,
   duration: 0,
   levelId: -1,
   playhead: null,
@@ -23,6 +24,10 @@ window.player = {
   getVideo: function () {
     player.video = document.getElementById("videoplayer");
     if (!player.video) {
+      var container = document.querySelector("#video-screen .content");
+      if (!container) {
+        return null;
+      }
       var newVideo = document.createElement("video");
       newVideo.id = "videoplayer";
       newVideo.style.height = "100%";
@@ -35,7 +40,7 @@ window.player = {
         newVideo.style.objectFit = video.aspects[video.aspect];
       }
 
-      $("#video-screen .content").prepend(newVideo);
+      container.prepend(newVideo);
       player.video = newVideo;
     }
     return player.video;
@@ -46,6 +51,7 @@ window.player = {
     if (player.video && player.video.parentNode) {
       player.video.parentNode.removeChild(player.video);
     }
+    player.video = null;
   },
 
   applySubtitlePrefs: function () {
@@ -68,6 +74,7 @@ window.player = {
   config: function (timeFunction, endFunction) {
     player.deleteVideo();
     var v = player.getVideo();
+    if (!v) return;
     player.applySubtitlePrefs();
     try {
       var savedVol = parseFloat(localStorage.getItem("cr_volume"));
@@ -89,7 +96,8 @@ window.player = {
       }
     });
     v.addEventListener("seeked", function () {
-      if (player.getVideo().paused) {
+      var curV = player.getVideo();
+      if (curV && curV.paused) {
         video.showBTN("pause");
       } else {
         video.hideBTN();
@@ -98,15 +106,16 @@ window.player = {
         video.syncMediaSessionPosition();
       }
     });
-    //player.getVideo().addEventListener("play", player.onPlay);
   },
 
   getPlayed: function () {
-    return player.getVideo().currentTime;
+    var v = player.getVideo();
+    return v ? v.currentTime || 0 : 0;
   },
 
   getDuration: function () {
-    return player.getVideo().duration;
+    var v = player.getVideo();
+    return v ? v.duration || 0 : 0;
   },
 
   // esto debe ejecutarse despues de el video_v2
@@ -139,10 +148,12 @@ window.player = {
 
   play: function (drm, url, playhead, noplay) {
     var seq = ++player._playSeq;
-    if (player.plugin && typeof player.plugin.reset === "function") {
+    player.state = player.states.BUFFERING;
+    if (player.plugin) {
       try {
         player.plugin.reset();
-      } catch (e) {}
+      } catch (_) {}
+      player.plugin = null;
     }
     player.config(video.setPlayingTime, video.end);
     session.refresh({
@@ -150,6 +161,11 @@ window.player = {
         if (seq !== player._playSeq || !document.getElementById("video-screen")) {
           return;
         }
+        var videoEl = player.getVideo();
+        if (!videoEl) {
+          return;
+        }
+        player.state = player.states.BUFFERING;
         player.plugin = dashjs.MediaPlayer().create();
         player.plugin.extend(
           "RequestModifier",
@@ -175,7 +191,7 @@ window.player = {
           });
         }
 
-        player.plugin.initialize(player.getVideo(), url, true);
+        player.plugin.initialize(videoEl, url, true);
 
         if (
           typeof player.plugin.on === "function" &&
@@ -264,7 +280,9 @@ window.player = {
   },
 
   pause: function () {
-    player.getVideo().pause();
+    var v = player.getVideo();
+    if (!v) return;
+    v.pause();
     player.state = player.states.PAUSED;
     video.showBTN("pause");
     if (typeof video !== "undefined" && typeof video.syncMediaSessionPosition === "function") {
@@ -273,7 +291,9 @@ window.player = {
   },
 
   resume: function () {
-    player.getVideo().play();
+    var v = player.getVideo();
+    if (!v) return;
+    v.play();
     video.hideBTN();
     player.state = player.states.PLAYING;
     if (typeof video !== "undefined" && typeof video.syncMediaSessionPosition === "function") {
@@ -282,7 +302,9 @@ window.player = {
   },
 
   playPause: function () {
-    if (player.getVideo().paused) {
+    var v = player.getVideo();
+    if (!v) return;
+    if (v.paused) {
       player.resume();
     } else {
       player.pause();
@@ -323,7 +345,9 @@ window.player = {
   },
 
   forwardTo: function (seconds) {
-    player.getVideo().currentTime = seconds;
+    var v = player.getVideo();
+    if (!v) return;
+    v.currentTime = seconds;
     if (typeof video !== "undefined" && typeof video.updateNextEpisodeCount === "function") {
       video.updateNextEpisodeCount(seconds);
     }
@@ -453,22 +477,32 @@ window.player = {
 
   stop: function () {
     player._playSeq++;
-    if (player.state != player.states.STOPPED) {
-      player.getVideo().pause();
-      if (player.plugin && typeof player.plugin.reset === "function") {
-        try {
-          player.plugin.reset();
-        } catch (e) {}
-      }
-      player.plugin = NaN;
-      player.video = NaN;
+    clearTimeout(player.timers.forward_rewind);
+    var v = player.video || document.getElementById("videoplayer");
+    if (v) {
+      try {
+        v.pause();
+      } catch (_) {}
+    }
+    if (player.plugin) {
+      try {
+        player.plugin.reset();
+      } catch (_) {}
+      player.plugin = null;
+    }
+    player.video = null;
+    player.noplay = null;
+    player.playhead = null;
+    if (player.state !== player.states.STOPPED) {
       player.STOP_CALLBACK && player.STOP_CALLBACK();
       player.state = player.states.STOPPED;
     }
   },
 
   speed: function (rate) {
-    player.getVideo().playbackRate = rate;
+    var v = player.getVideo();
+    if (!v) return;
+    v.playbackRate = rate;
   },
 
   destroy: function () {
@@ -480,6 +514,9 @@ window.player = {
   },
 
   onbufferingcomplete: function () {
+    var v = player.getVideo();
+    if (!v) return;
+
     if (
       session.storage.quality !== "auto" &&
       player.plugin &&
@@ -496,7 +533,7 @@ window.player = {
     }
 
     if (typeof video !== "undefined" && video.speed && video.speed.active) {
-      player.getVideo().playbackRate = video.speed.active;
+      v.playbackRate = video.speed.active;
     }
 
     if (typeof video !== "undefined" && typeof video.syncVolumeUI === "function") {
@@ -512,17 +549,21 @@ window.player = {
     }
 
     if (player.playhead) {
-      player.getVideo().currentTime = player.playhead;
+      v.currentTime = player.playhead;
       player.playhead = null;
     }
 
     if (player.noplay) {
       player.noplay = null;
       player.pause();
-    } else if (!player.getVideo().paused || player.state !== player.states.PAUSED) {
-      player.getVideo().play();
+    } else if (!v.paused || player.state !== player.states.PAUSED) {
+      v.play();
       player.state = player.states.PLAYING;
       video.hideBTN();
+    }
+
+    if (typeof video !== "undefined" && typeof video.onPlaybackStarted === "function") {
+      video.onPlaybackStarted(player._playSeq);
     }
   },
 

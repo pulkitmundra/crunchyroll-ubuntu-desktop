@@ -185,7 +185,18 @@ window.settings = {
   },
   previous: NaN,
 
+  escapeHtml: function (str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  },
+
   init: function () {
+    $("[id='settings-screen']").remove();
+    settings.isDetails = false;
     var settings_element = document.createElement("div");
     settings_element.id = settings.id;
 
@@ -438,9 +449,9 @@ window.settings = {
           Object.keys(options)
             .map(
               (option) =>
-                `<li class="${option === active ? "active" : ""}">${
+                `<li class="${option === active ? "active" : ""}">${settings.escapeHtml(
                   options[option]
-                }</li>`
+                )}</li>`
             )
             .join("") +
           "</ul>"
@@ -619,7 +630,7 @@ window.settings = {
           (typeof changelog !== "undefined" &&
             changelog.data &&
             changelog.data.version) ||
-          "v2.3.0";
+          "v2.3.1";
         return `
         <div id="about-panel">
           <div class="about-header">
