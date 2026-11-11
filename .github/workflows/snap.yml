@@ -161,12 +161,14 @@ jobs:
           ls -lh /tmp/crunchyroll-ubuntu-desktop.snap
 
       - name: Install Snap Store publishing dependencies
-        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        env:
+          HAS_SNAP_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        if: env.HAS_SNAP_CREDS == 'true'
         run: |
           pip install --quiet craft-store pymacaroons requests
 
       - name: Upload & Release to Canonical Snap Store
-        if: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
           RELEASE_CHANNEL: ${{ github.event_name == 'push' && 'edge' || inputs.channel || 'stable' }}
