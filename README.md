@@ -21,6 +21,8 @@ $ crunchyroll --ozone-platform=x11
 <p align="center">
   <a href="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/stargazers"><img src="https://img.shields.io/github/stars/pulkitmundra/crunchyroll-ubuntu-desktop?style=social" alt="GitHub Stars" /></a>&nbsp;
   <a href="https://snapcraft.io/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Snap_Store-v2.3.1-82BEA0?style=flat&logo=snapcraft&logoColor=white" alt="Snap Store" /></a>&nbsp;
+  <a href="https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop"><img src="https://img.shields.io/badge/Case_Study-Interactive_Demo-10B981?style=flat&logo=vercel&logoColor=white" alt="Case Study and Interactive Demo" /></a>&nbsp;
+  <a href="https://pulkit-mundra-portfolio.vercel.app/engineering/wayland-fullscreen-black-curtain-translucent-linux-player"><img src="https://img.shields.io/badge/Deep_Dive-Wayland_ARGB_Curtain-0EA5E9?style=flat&logo=linux&logoColor=white" alt="Wayland Engineering Deep Dive" /></a>&nbsp;
   <a href="https://github.com/pulkitmundra"><img src="https://img.shields.io/badge/Maintainer-%40pulkitmundra-181717?style=flat&logo=github" alt="Maintainer" /></a>&nbsp;
   <a href="https://pulkit-mundra-portfolio.vercel.app"><img src="https://img.shields.io/badge/Portfolio-pulkit--mundra-2563EB?style=flat&logo=vercel" alt="Portfolio" /></a>&nbsp;
   <a href="https://buymeacoffee.com/pulkitmundra"><img src="https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" /></a>&nbsp;
@@ -84,6 +86,8 @@ flowchart LR
     B -->|"Press F9 / F11 or Click<br/>Expand (Exit Mini / Maximize)"| C["1-Step Restore<br/>to Fullscreen / Normal Size"]
     B -->|"Click / Scrub / Drag<br/>Inside Mini-Player"| D["Stays Compact in Mini-Player<br/>for Scrubbing or Play/Pause"]
 ```
+
+> **Interactive Player Simulator & Wayland Deep Dive:** Try the live Smart Auto-PiP (`F10`) & translucency simulator in the [**Case Study**](https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop) or read the engineering writeup: [**Bypassing GNOME Wayland's Fullscreen Black Curtain for a Translucent Linux Media Player ->**](https://pulkit-mundra-portfolio.vercel.app/engineering/wayland-fullscreen-black-curtain-translucent-linux-player)
 
 ---
 
@@ -283,7 +287,7 @@ Many older Electron wrappers fail on Crunchyroll with `SHAK-6002` DRM errors or 
 <a id="author"></a>
 ## 👨🏻‍💻 Author, Support & Contact
 
-Built and maintained by **Pulkit Mundra** (Senior Software Developer - SDE-3). Issues, feature requests, and pull requests are welcome!
+Built and maintained by **Pulkit Mundra** ([Portfolio](https://pulkit-mundra-portfolio.vercel.app) · [Interactive Case Study](https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop) · [Wayland Compositor Deep Dive](https://pulkit-mundra-portfolio.vercel.app/engineering/wayland-fullscreen-black-curtain-translucent-linux-player)). Issues, feature requests, and pull requests are welcome!
 
 If this desktop app makes watching anime on Ubuntu/Linux better for you, consider buying me a coffee or sponsoring the project:
 
@@ -293,6 +297,9 @@ If this desktop app makes watching anime on Ubuntu/Linux better for you, conside
   </a>
   <a href="https://github.com/sponsors/pulkitmundra">
     <img src="https://img.shields.io/badge/Sponsor_on_GitHub-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="Sponsor on GitHub" />
+  </a>
+  <a href="https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop">
+    <img src="https://img.shields.io/badge/Case_Study-10B981?style=for-the-badge&logo=vercel&logoColor=white" alt="Case Study" />
   </a>
   <a href="https://pulkit-mundra-portfolio.vercel.app">
     <img src="https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Portfolio" />
