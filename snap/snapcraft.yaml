@@ -2,10 +2,13 @@ name: crunchyroll-ubuntu-desktop
 title: Crunchyroll Desktop (Unofficial)
 adopt-info: crunchyroll-app
 license: ISC
-website: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop
+website: https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop
 source-code: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop
 issues: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues
 contact: https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues
+donation:
+  - https://buymeacoffee.com/pulkitmundra
+  - https://github.com/sponsors/pulkitmundra
 summary: Unofficial Linux desktop client for Crunchyroll with Widevine, PiP & MPRIS
 description: |
   Crunchyroll Desktop (Unofficial) is an open-source Linux desktop client for
@@ -23,6 +26,11 @@ description: |
   * In-player Video Quality selector (Q), Sleep Timer / Auto-Pause (T) & Timeline Chapter Markers
   * See-through Player Window Translucency (20% - 100%) & Standing Vertical Volume/Translucency Popovers
   * HUD-free 1080p video frame screenshot capture (Ctrl+Shift+S)
+
+  Architecture Deep Dive & More from the Developer (Pulkit Mundra):
+  * Project Case Study & Interactive Demo: https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop
+  * Engineering Write-Up (Wayland Fullscreen & ARGB Translucency): https://pulkit-mundra-portfolio.vercel.app/engineering/wayland-fullscreen-black-curtain-translucent-linux-player
+  * Developer Portfolio & More Open-Source Linux Apps: https://pulkit-mundra-portfolio.vercel.app
 
   Support the Project:
   * Buy Me a Coffee: https://buymeacoffee.com/pulkitmundra

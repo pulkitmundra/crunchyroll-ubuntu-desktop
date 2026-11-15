@@ -660,9 +660,9 @@ window.settings = {
                 <i class="fa-solid fa-code-branch"></i>
                 <span>github.com/pulkitmundra/crunchyroll-ubuntu-desktop</span>
               </a>
-              <a class="about-link-pill" data-external-url="https://pulkit-mundra-portfolio.vercel.app">
+              <a class="about-link-pill" data-external-url="https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop">
                 <i class="fa-solid fa-globe"></i>
-                <span>pulkit-mundra-portfolio.vercel.app</span>
+                <span>Developer Portfolio &amp; More Linux Apps</span>
               </a>
               <a class="about-link-pill" data-external-url="https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues">
                 <i class="fa-solid fa-bug"></i>

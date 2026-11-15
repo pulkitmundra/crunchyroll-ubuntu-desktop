@@ -121,6 +121,11 @@ jobs:
             * See-through Player Window Translucency (20% - 100%) & Standing Vertical Volume/Translucency Popovers
             * HUD-free 1080p video frame screenshot capture (Ctrl+Shift+S)
 
+            Architecture Deep Dive & More from the Developer (Pulkit Mundra):
+            * Project Case Study & Interactive Demo: https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop
+            * Engineering Write-Up (Wayland Fullscreen & ARGB Translucency): https://pulkit-mundra-portfolio.vercel.app/engineering/wayland-fullscreen-black-curtain-translucent-linux-player
+            * Developer Portfolio & More Open-Source Linux Apps: https://pulkit-mundra-portfolio.vercel.app
+
             Support the Project:
             * Buy Me a Coffee: https://buymeacoffee.com/pulkitmundra
             * GitHub Sponsors: https://github.com/sponsors/pulkitmundra
@@ -132,6 +137,18 @@ jobs:
             Entertainment. Crunchyroll and its logo are registered trademarks of
             Crunchyroll, LLC. A valid Crunchyroll account is required to stream content.
           license: ISC
+          links:
+            contact:
+              - https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues
+            donation:
+              - https://buymeacoffee.com/pulkitmundra
+              - https://github.com/sponsors/pulkitmundra
+            issues:
+              - https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop/issues
+            source-code:
+              - https://github.com/pulkitmundra/crunchyroll-ubuntu-desktop
+            website:
+              - https://pulkit-mundra-portfolio.vercel.app/projects/crunchyroll-ubuntu-desktop
           base: core22
           grade: stable
           confinement: strict
