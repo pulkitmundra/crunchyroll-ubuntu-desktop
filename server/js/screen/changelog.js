@@ -1,22 +1,22 @@
 window.changelog = {
   id: "changelog-modal",
   data: {
-    version: "v2.3.1",
+    version: "v2.4.0",
     changes: [
       {
-        title: "See-Through Player Translucency (20% - 100%) & Standing Vertical Sliders",
+        title: "Long-Pause & Sleep/Wake Audio Recovery + Live Token Self-Healing",
         description:
-          "Make the entire player window see-through while watching anime so you can read or code in your editor or browser behind the video (automatically restores 100% outside the player and on app reopen), paired with compact top-right style circular buttons and standing vertical popover sliders for Volume and Translucency.",
+          "Eliminated silent audio after long pauses, Bluetooth sink switches, or laptop suspend/resume via in-process PipeWire/PulseAudio routing, automatic sink re-binding, silent-audio watchdog recovery, live DASH token refresh, and exact-timestamp Widevine stream reload.",
       },
       {
-        title: "In-Player Video Quality, Sleep Timer, Chapter Markers & Airing Status",
+        title: "Star Ratings, Sub/Dub/Airing Badges & Movie Support Across All Tabs",
         description:
-          "Added live mid-stream Video Quality switching (Q) with active Auto resolution badge, Sleep Timer / Auto-Pause (T), Previous Episode navigation (P), timeline Intro/Credits/Recap markers, Ongoing/Completed badges with non-blocking next-episode & finale estimates, and instant Next Episode countdown sync.",
+          "Added star ratings, launch years, Ongoing/Completed airing status, and Sub/Dub badges across Watchlist, Custom Crunchylists, Watch History, Browse (v2 API), and Home cards, plus full Movie playback in History/Lists and reliable Mark as Unwatched.",
       },
       {
-        title: "GNOME Media Keys, Frame Capture, Season Switcher & History Controls",
+        title: "See-Through Player Translucency (20% - 100%), Quality Selector & Sleep Timer",
         description:
-          "Added Linux/GNOME MediaSession (MPRIS) integration, HUD-free frame capture (Ctrl+Shift+S), in-drawer season switcher, custom list rename, watch history removal, recent searches, episode watched toggles, and subtitle appearance settings.",
+          "Includes see-through ARGB player translucency with standing vertical Volume/Translucency sliders, live Video Quality selector (Q), Sleep Timer (T), timeline chapter markers, and GNOME MPRIS media keys.",
       },
     ],
   },

@@ -2,6 +2,24 @@
 
 All notable changes to **Crunchyroll Ubuntu Desktop** are documented in this file.
 
+## [v2.4.0] - 2026-11-18
+
+### Added
+- **Universal Star Ratings & Series Metadata Enrichment (`service.js`, `mappers/crunchyroll.js`, `mylist.js`, `history.js`, `home.js`):**
+  - Added batched `/content/v2/cms/objects` enrichment (`service.cmsObjects` + `mapper.enrichItemsWithSeriesMeta`) across **Watchlist**, **Custom Crunchylists**, **Watch History**, and **Home** episode/continue-watching cards so star ratings, launch years, `Sub`/`Dub` audio badges, and accurate `Ongoing`/`Completed` airing pills appear consistently everywhere.
+  - Upgraded **Browse** from `/content/v1/browse` to `/content/v2/discover/browse?ratings=true` for native star ratings on all browse grids.
+- **Full Movie Support Across Lists, Search & Watch History (`crunchyroll.js`, `home.details.js`, `home.episodes.js`, `history.js`, `search.js`):**
+  - Added full `movie_listing` and watched `movie` playback, details routing, and history/list card rendering alongside episodic series.
+
+### Fixed
+- **Long-Pause, Bluetooth Switch & Laptop Suspend/Resume Audio Recovery (`index.js`, `preload.js`, `player.js`, `video.js`):**
+  - Disabled Chromium out-of-process audio sandbox (`AudioServiceOutOfProcess`, `AudioServiceSandbox`) so PipeWire / PulseAudio streams survive idle corking on Ubuntu/Linux, granted local `speaker-selection` and `mediaKeySystem` permissions, held `powerSaveBlocker('prevent-display-sleep')` strictly during active playback, and forwarded Electron `powerMonitor` `suspend`/`resume` events.
+  - Added automatic `setSinkId('default')` -> `setSinkId('')` PipeWire stream re-binding after pauses `>= 5s` or `navigator.mediaDevices` `devicechange` (e.g. Galaxy Buds switching), exact-timestamp `video_v2` stream + Widevine license reload after pauses `>= 10m` or system wake (with Wi-Fi reconnect retry backoff), live `session.storage.access_token` injection in `dash.js` segment filters, pre-`attachSource` Widevine protection setup, and a `webkitAudioDecodedByteCount` silent-audio watchdog.
+- **API Resilience, Mark-as-Unwatched & Card Layout Polish (`service.js`, `session.js`, `home.episodes.js`, `home.css`, `mylist.css`, `history.css`):**
+  - Fixed false `AIRING` badges on finished historical simulcasts, fixed HTTP `400` when subtitle language is set to `Disabled`, fixed "Mark as Unwatched" via `DELETE /content/v2/discover/{account_id}/watch-history/{id}`, added centralized HTTP status validation with 1-time `401`/`403` token/cookie refresh retry, and eliminated badge/button/title CSS overlaps and `228px` row clipping.
+
+---
+
 ## [v2.3.1] - 2026-11-11
 
 ### Fixed

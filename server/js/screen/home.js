@@ -174,7 +174,10 @@ window.home = {
           (home.data && home.data.main && home.data.main.banner);
     if (!item) return;
     home._previewItem = item;
-    $(`#${home.id} .details .background img`).attr("src", item.background);
+    $(`#${home.id} .details .background img`).attr(
+      "src",
+      item.seriesBackground || item.background
+    );
     var title = $(`#${home.id} .details .info .title`)[0];
     if (title) {
       title.innerText = item.title || "";
@@ -190,7 +193,7 @@ window.home = {
 
     var description = $(`#${home.id} .details .info .description`)[0];
     if (description) {
-      description.innerText = item.description || "";
+      description.innerText = item.seriesDescription || item.description || "";
     }
   },
 
@@ -304,8 +307,11 @@ window.home = {
                 var loadRowIndex = home.position - 1;
                 currentList.lazy = false;
                 home.setRowLoading(loadRowIndex, true);
+                var catParam = currentList.id
+                  ? `${home.data.main.category},${currentList.id}`
+                  : `${home.data.main.category}`;
                 mapper.loadCategoryListAsync(
-                  `${home.data.main.category},${currentList.id}`,
+                  catParam,
                   currentList.items.length,
                   20,
                   loadRowIndex,
@@ -315,7 +321,8 @@ window.home = {
                       if (!home.data || !home.data.main || !home.data.main.lists || !home.data.main.lists[index]) {
                         return;
                       }
-                      var newRaw = (response && Array.isArray(response.items)) ? response.items : [];
+                      var newRaw =
+                        (response && (response.data || response.items)) || [];
                       home.data.main.lists[index].lazy = newRaw.length === 20;
                       home.addToList(index, mapper.mapItems(newRaw));
                     },

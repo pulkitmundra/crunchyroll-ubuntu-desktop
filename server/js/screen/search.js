@@ -154,7 +154,7 @@ window.search = {
             search.input &&
             search.input.value.trim().length >= 2
           ) {
-            search.start();
+            search.start(false, true);
           }
         }, 450);
       });
@@ -192,24 +192,27 @@ window.search = {
 
   _reqId: 0,
 
-  start: function (saveImmediate) {
+  start: function (saveImmediate, isLiveTyping) {
     if (!search.input || !search.input.value.trim()) return;
     var queryStr = search.input.value.trim();
     if (saveImmediate) {
       search.saveRecentSearch(queryStr);
     }
     var currentReq = ++search._reqId;
-    loading.start();
+    var usedGlobalLoader = !isLiveTyping;
+    if (usedGlobalLoader) {
+      loading.start();
+    }
     service.search({
       data: {
         query: queryStr,
       },
       success: function (response) {
         if (currentReq !== search._reqId || !document.getElementById(search.id)) {
-          loading.end();
+          if (usedGlobalLoader) loading.end();
           return;
         }
-        loading.end();
+        if (usedGlobalLoader) loading.end();
         search.data.result = mapper.search(response);
         var elements_content = "";
         var esc =
@@ -227,6 +230,7 @@ window.search = {
           $("#search-screen .list-container-over").html(
             `<div style="grid-column: 1 / -1; color: rgba(255,255,255,0.55); font-size: 1.5rem; padding: 3rem 1rem;">No results found for "${esc(queryStr)}"</div>`
           );
+          search.position = -1;
           search.last_postion = 0;
           search.scroll_data.rows = 0;
           return;
@@ -234,13 +238,20 @@ window.search = {
         if (queryStr.length >= 3) {
           search.saveRecentSearch(queryStr);
         }
+        var gridFocused = $(`#${search.id} .list-container`).hasClass("focus");
+        if (!gridFocused) {
+          search.position = -1;
+        } else if (search.position < 0 || search.position >= search.data.result.length) {
+          search.position = 0;
+        }
         search.data.result.forEach((element, index) => {
           var badges =
             typeof mapper !== "undefined" && mapper.formatCardBadges
               ? mapper.formatCardBadges(element)
               : "";
+          var isSel = gridFocused ? index === search.position : index === 0;
           elements_content += `
-              <div class="item${index === 0 ? " selected" : ""}">
+              <div class="item${isSel ? " selected" : ""}">
                 <div class="search-poster-wrap">
                   <img src="${esc(element.poster)}" alt="">
                   ${badges}
@@ -251,6 +262,10 @@ window.search = {
 
         $("#search-screen .list-container-over").html(elements_content);
         search.last_postion = 0;
+        var overGridEl = $(`#search-screen .list-container-over`).get(0);
+        if (overGridEl) {
+          overGridEl.style.marginTop = "0px";
+        }
         var firstItemEl = $(`#search-screen .list-container-over .item`).get(0);
         if (firstItemEl) {
           search.scroll_data.item_height =
@@ -262,7 +277,7 @@ window.search = {
       },
       error: function (error) {
         if (currentReq !== search._reqId) return;
-        loading.end();
+        if (usedGlobalLoader) loading.end();
         console.log(error);
       },
     });

@@ -227,33 +227,46 @@ window.home_episodes = {
     var nowWatched = !currentlyWatched;
     var targetPlayheadSec = nowWatched ? Math.round(durMin * 60) : 0;
 
-    service.setHistory({
-      data: {
-        content_id: ep.id,
-        playhead: targetPlayheadSec,
-      },
-      success: function () {
-        ep.playhead = nowWatched ? durMin : 0;
-        home_episodes.refreshEpisodeCard(epIndex, btnEl);
-        if (typeof window.showToast === "function") {
-          var epLabel =
-            (ep.episode_number ? "E" + ep.episode_number + " - " : "") +
-            (ep.title || "Episode");
-          window.showToast(
-            'Marked "' +
-              epLabel +
-              '" as ' +
-              (nowWatched ? "Watched" : "Unwatched"),
-            nowWatched ? "added" : "removed"
-          );
-        }
-      },
-      error: function () {
-        if (typeof window.showToast === "function") {
-          window.showToast("Failed to update episode watch status", "error");
-        }
-      },
-    });
+    var onDone = function () {
+      ep.playhead = nowWatched ? durMin : 0;
+      home_episodes.refreshEpisodeCard(epIndex, btnEl);
+      if (typeof window.showToast === "function") {
+        var epLabel =
+          (ep.episode_number ? "E" + ep.episode_number + " - " : "") +
+          (ep.title || "Episode");
+        window.showToast(
+          'Marked "' +
+            epLabel +
+            '" as ' +
+            (nowWatched ? "Watched" : "Unwatched"),
+          nowWatched ? "added" : "removed"
+        );
+      }
+    };
+    var onFail = function () {
+      if (typeof window.showToast === "function") {
+        window.showToast("Failed to update episode watch status", "error");
+      }
+    };
+
+    if (nowWatched) {
+      service.setHistory({
+        data: {
+          content_id: ep.id,
+          playhead: targetPlayheadSec,
+        },
+        success: onDone,
+        error: onFail,
+      });
+    } else {
+      service.deleteHistoryItem({
+        data: {
+          content_id: ep.id,
+        },
+        success: onDone,
+        error: onFail,
+      });
+    }
   },
 
   view: function (episode) {

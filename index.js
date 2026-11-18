@@ -4,11 +4,51 @@ const path = require("path");
 const fs = require("fs");
 const { fileURLToPath } = require("url");
 
+// Keep Chromium PulseAudio/PipeWire output in-process on Linux so idle sink suspend
+// or Bluetooth A2DP reconnects cannot leave an orphaned AudioService utility socket silent.
+try {
+  const existingDisabledFeatures = app.commandLine.getSwitchValue("disable-features");
+  const audioFeatures = "AudioServiceOutOfProcess,AudioServiceSandbox";
+  app.commandLine.appendSwitch(
+    "disable-features",
+    existingDisabledFeatures
+      ? `${existingDisabledFeatures},${audioFeatures}`
+      : audioFeatures
+  );
+  app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+} catch (_) {}
+
 const isWaylandSession =
   Boolean(process.env.WAYLAND_DISPLAY) ||
   String(process.env.XDG_SESSION_TYPE || "").toLowerCase() === "wayland";
 
 let mainWindow = null;
+let playbackPowerBlockerId = null;
+
+function setPlaybackPowerSaveBlocker(enable) {
+  try {
+    const psb = electron.powerSaveBlocker;
+    if (!psb) return false;
+    if (enable) {
+      if (
+        playbackPowerBlockerId === null ||
+        !psb.isStarted(playbackPowerBlockerId)
+      ) {
+        playbackPowerBlockerId = psb.start("prevent-display-sleep");
+      }
+      return true;
+    }
+    if (
+      playbackPowerBlockerId !== null &&
+      psb.isStarted(playbackPowerBlockerId)
+    ) {
+      psb.stop(playbackPowerBlockerId);
+    }
+    playbackPowerBlockerId = null;
+  } catch (_) {}
+  return false;
+}
+
 let isMiniPlayer = false;
 let isPinned = false;
 let currentWindowOpacity = 1;
@@ -378,12 +418,15 @@ function toggleFullScreenMode(win) {
   clearTranslucentFsTimer();
   isTransitioning = true;
   lastShrinkTime = Date.now();
+  let targetFullScreen = false;
   if (isMiniPlayer) {
     wasFullScreenBeforeMini = true;
+    targetFullScreen = true;
     expandFromFloatingToFull(win, isPinned);
   } else if (win.isFullScreen() || translucentFullscreenBypass) {
     wasFullScreenBeforeMini = false;
     translucentFullscreenBypass = false;
+    targetFullScreen = false;
     if (win.isFullScreen()) {
       win.setFullScreen(false);
     }
@@ -416,6 +459,7 @@ function toggleFullScreenMode(win) {
       }
     }
     wasFullScreenBeforeMini = true;
+    targetFullScreen = true;
     if (currentWindowOpacity < 0.999) {
       translucentFullscreenBypass = true;
       win.setBounds(getFullWorkAreaBounds(win));
@@ -429,11 +473,16 @@ function toggleFullScreenMode(win) {
       isTransitioning = false;
     }, 60);
   }
+  const b = win.getContentBounds();
   return {
     isMiniPlayer,
     isPinned,
-    isFullScreen: win.isFullScreen() || translucentFullscreenBypass,
-    isCompact: isMiniPlayer || win.getContentBounds().width < 1000,
+    isFullScreen: targetFullScreen,
+    isCompact: isMiniPlayer || b.width <= 720 || b.height <= 420,
+    scale:
+      b.width > 0 && b.height > 0
+        ? Math.max(0.15, Math.min(b.width / 1920, b.height / 1080))
+        : 1,
   };
 }
 
@@ -471,6 +520,7 @@ function createWindow() {
   mainWindow = win;
   win.on("closed", () => {
     clearTranslucentFsTimer();
+    setPlaybackPowerSaveBlocker(false);
     if (mainWindow === win) {
       mainWindow = null;
     }
@@ -480,6 +530,23 @@ function createWindow() {
     "Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/5.0 TV Safari/537.36";
 
   win.webContents.setUserAgent(userAgent);
+
+  // Allow Widevine EME + HTMLMediaElement.setSinkId() audio output rebinding for the local player window
+  const allowedLocalPerms = new Set([
+    "media",
+    "mediaKeySystem",
+    "speaker-selection",
+    "fullscreen",
+  ]);
+  try {
+    win.webContents.session.setPermissionCheckHandler((wc, permission) => {
+      if (wc && wc !== win.webContents) return false;
+      return allowedLocalPerms.has(permission);
+    });
+    win.webContents.session.setPermissionRequestHandler((wc, permission, cb) => {
+      cb(Boolean((!wc || wc === win.webContents) && allowedLocalPerms.has(permission)));
+    });
+  } catch (_) {}
 
   // Security lockdown: deny external popup windows and restrict top-level navigation to canonical local index.html
   const localIndexFile = path.resolve(__dirname, "index.html");
@@ -898,6 +965,12 @@ ipcMain.on("openExternal", (event, url) => {
   } catch (_) {}
 });
 
+ipcMain.handle("setPlaybackPowerSave", (event, playing) => {
+  const win = resolveSenderWindow(event);
+  if (!win) return { active: false };
+  return { active: setPlaybackPowerSaveBlocker(Boolean(playing)) };
+});
+
 ipcMain.on("gamepadButtonPress", (event, buttonName) => {
   const win = resolveSenderWindow(event);
   if (!win) return;
@@ -907,6 +980,7 @@ ipcMain.on("gamepadButtonPress", (event, buttonName) => {
 ipcMain.on("exitApp", (event) => {
   const win = resolveSenderWindow(event);
   if (!win) return;
+  setPlaybackPowerSaveBlocker(false);
   app.quit();
 });
 
@@ -915,6 +989,21 @@ app.whenReady().then(async () => {
     await electron.components.whenReady();
   }
   createWindow();
+  try {
+    if (electron.powerMonitor) {
+      electron.powerMonitor.on("suspend", () => {
+        setPlaybackPowerSaveBlocker(false);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("systemPowerEvent", "suspend");
+        }
+      });
+      electron.powerMonitor.on("resume", () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("systemPowerEvent", "resume");
+        }
+      });
+    }
+  } catch (_) {}
 });
 
 app.on("window-all-closed", () => {

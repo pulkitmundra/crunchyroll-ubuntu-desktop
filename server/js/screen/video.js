@@ -964,6 +964,9 @@ window.video = {
     video.sleep.state = false;
     video._chaptersDirty = true;
     video.option = false;
+    video._preferredAudioLocale = null;
+    video._preferredSubtitle = null;
+    video._lastSavedPlayheadSec = -1;
     video.currentItem = Object.assign({}, item);
     if (typeof menu !== "undefined" && menu.isOpen) {
       menu.close();
@@ -1164,6 +1167,9 @@ window.video = {
     video.sleep.state = false;
     video.settings.open = false;
     video.option = false;
+    video._preferredAudioLocale = null;
+    video._preferredSubtitle = null;
+    video._lastSavedPlayheadSec = -1;
     if (typeof main !== "undefined" && typeof main.resolveState === "function") {
       main.state = main.resolveState() || video.previous;
     } else {
@@ -1632,10 +1638,48 @@ window.video = {
     }
   },
 
+  recoverPlayback: function (keepPaused) {
+    if (!video.episode || !document.getElementById(video.id)) {
+      return;
+    }
+    var playedSec =
+      typeof player !== "undefined" && typeof player.getPlayed === "function"
+        ? player.getPlayed()
+        : 0;
+    var curPlayheadMin =
+      playedSec > 0
+        ? playedSec / 60
+        : (video.currentItem && video.currentItem.playhead) || 0;
+    var rawDurSec =
+      typeof player !== "undefined" && typeof player.getDuration === "function"
+        ? player.getDuration()
+        : 0;
+    var baseDurMin =
+      rawDurSec > 0
+        ? Math.round(rawDurSec / 60)
+        : (video.currentItem && video.currentItem.duration) || 0;
+    var durMin =
+      baseDurMin > 0
+        ? Math.max(baseDurMin, Math.ceil(curPlayheadMin) + 1)
+        : 0;
+    video.currentItem = Object.assign({}, video.currentItem || {}, {
+      id: video.episode,
+      playhead: curPlayheadMin,
+      duration: durMin,
+      _audioRedirected: true,
+    });
+    video.play(
+      video.currentItem,
+      Boolean(keepPaused),
+      video.subtitle || video._preferredSubtitle || undefined
+    );
+  },
+
   play: function (item, noplay, forceSubtitle) {
     var reqId = (video._playReqId = (video._playReqId || 0) + 1);
     video.episode = item.id;
     video._lastLiveHeight = 0;
+    video._lastSavedPlayheadSec = -1;
     video.stopNext();
     video.next.shown = false;
     video.clearAutoSkip(true);
@@ -1687,40 +1731,98 @@ window.video = {
           }
           return;
         }
+        video._pendingSessionRelease =
+          sessionEpId && sessionToken
+            ? {
+                reqId: reqId,
+                playSeq: typeof player !== "undefined" ? player._playSeq : 0,
+                id: sessionEpId,
+                token: sessionToken,
+              }
+            : null;
+
+        if (
+          video._preferredAudioLocale &&
+          !item._audioRedirected &&
+          data &&
+          data.audioLocale !== video._preferredAudioLocale &&
+          Array.isArray(data.versions)
+        ) {
+          var matchedVer = data.versions.find(function (v) {
+            return (
+              v &&
+              v.audio_locale === video._preferredAudioLocale &&
+              v.guid &&
+              v.guid !== item.id
+            );
+          });
+          if (matchedVer) {
+            video.releasePendingSession();
+            video.currentItem = Object.assign({}, video.currentItem || item, {
+              id: matchedVer.guid,
+              _audioRedirected: true,
+            });
+            video.play(video.currentItem, noplay, forceSubtitle);
+            return;
+          }
+        }
+
         video.token = sessionToken;
         video.stopNext();
         video.setSkipIntro(item.id);
         video.next.shown = false;
         try {
-          video.audio = data.audioLocale;
+          var hardSubs =
+            data && data.hardSubs && typeof data.hardSubs === "object"
+              ? data.hardSubs
+              : {};
+          video.audio = (data && data.audioLocale) || "";
           video.audios = [{ name: video.audio, id: item.id }];
-          if (data.versions) {
+          if (data && Array.isArray(data.versions) && data.versions.length) {
             video.audios = data.versions.map((element) => ({
               name: element.audio_locale,
               id: element.guid,
             }));
           }
 
-          if (!forceSubtitle) {
-            video.subtitle = data.hardSubs[session.storage.account.language]
-              ? session.storage.account.language
-              : "Disabled";
+          var requestedSub =
+            forceSubtitle || video._preferredSubtitle || null;
+          var acctSubLang =
+            session &&
+            session.storage &&
+            session.storage.account &&
+            session.storage.account.language;
+          var acctAudioLang =
+            session &&
+            session.storage &&
+            session.storage.account &&
+            session.storage.account.audio;
+
+          if (!requestedSub) {
+            video.subtitle =
+              acctSubLang && hardSubs[acctSubLang] ? acctSubLang : "Disabled";
             video.subtitle =
               video.subtitle === "Disabled" &&
-              data.hardSubs[session.storage.account.audio]
-                ? session.storage.account.audio
+              acctAudioLang &&
+              hardSubs[acctAudioLang]
+                ? acctAudioLang
                 : video.subtitle;
           } else {
-            video.subtitle = forceSubtitle;
+            video.subtitle = requestedSub;
           }
-          video.subtitles = data.hardSubs
-            ? Object.keys(data.hardSubs).map((element) => ({
-                name: element,
-                url: data.hardSubs[element].url,
-              }))
-            : [];
+          video.subtitles = Object.keys(hardSubs)
+            .filter(function (k) {
+              return hardSubs[k] && hardSubs[k].url;
+            })
+            .map((element) => ({
+              name: element,
+              url: hardSubs[element].url,
+            }));
 
-          video.subtitles.unshift({ name: "Disabled", url: data.url });
+          video.subtitles.unshift({
+            name: "Disabled",
+            url: data && data.url ? data.url : "",
+          });
           var subtitleIndex = video.subtitles.findIndex(
             (e) => e.name === video.subtitle
           );
@@ -1735,27 +1837,43 @@ window.video = {
             item.duration && item.playhead >= item.duration ? 0 : item.playhead,
             noplay
           );
-          video._pendingSessionRelease =
-            sessionEpId && sessionToken
-              ? {
-                  reqId: reqId,
-                  playSeq: player._playSeq,
-                  id: sessionEpId,
-                  token: sessionToken,
-                }
-              : null;
+          if (video._pendingSessionRelease) {
+            video._pendingSessionRelease.playSeq = player._playSeq;
+          }
           video.startHistory();
           video.setAudios();
           video.setSubtitles();
           video.updateMediaSession();
         } catch (error) {
+          video.releasePendingSession();
           console.log(error);
         }
 
         video.showOSD();
       },
       error: function (error) {
-        if (reqId !== video._playReqId) return;
+        if (reqId !== video._playReqId || !document.getElementById(video.id)) {
+          return;
+        }
+        var status = error && error.status;
+        var retryAttempt = (item && item._netRetryCount) || 0;
+        if (
+          retryAttempt < 3 &&
+          (!status || status >= 500 || status === 408 || status === 429)
+        ) {
+          var delayMs = (retryAttempt + 1) * 1600;
+          video.showBTN("loading");
+          setTimeout(function () {
+            if (reqId !== video._playReqId || !document.getElementById(video.id)) {
+              return;
+            }
+            var nextItem = Object.assign({}, item, {
+              _netRetryCount: retryAttempt + 1,
+            });
+            video.play(nextItem, noplay, forceSubtitle);
+          }, delayMs);
+          return;
+        }
         video.stopNext();
         video.next.shown = false;
         console.log(error);
@@ -2138,7 +2256,9 @@ window.video = {
 
   changeAudio: function (index) {
     if (!video.audios || !video.audios[index]) return;
-    var nextEpisodeId = video.audios[index].id;
+    var chosenAudio = video.audios[index];
+    var nextEpisodeId = chosenAudio.id;
+    video._preferredAudioLocale = chosenAudio.name || null;
     var curPlayheadMin = player.getPlayed() / 60;
     var baseDurMin =
       player.getDuration() > 0
@@ -2152,6 +2272,7 @@ window.video = {
       id: nextEpisodeId,
       playhead: curPlayheadMin,
       duration: durMin,
+      _audioRedirected: true,
     });
     if (video.episodesDrawer) {
       video.episodesDrawer.list = [];
@@ -2181,6 +2302,8 @@ window.video = {
 
   changeSubtitle: function (index) {
     if (!video.subtitles || !video.subtitles[index]) return;
+    var chosenSub = video.subtitles[index].name;
+    video._preferredSubtitle = chosenSub || null;
     var curPlayheadMin = player.getPlayed() / 60;
     var baseDurMin =
       player.getDuration() > 0
@@ -2194,8 +2317,9 @@ window.video = {
       id: video.episode,
       playhead: curPlayheadMin,
       duration: durMin,
+      _audioRedirected: true,
     });
-    video.play(video.currentItem, false, video.subtitles[index].name);
+    video.play(video.currentItem, false, chosenSub);
   },
 
   updateNextEpisodeCount: function (overrideTime) {
@@ -2965,15 +3089,34 @@ window.video = {
   startHistory: function () {
     clearInterval(video.timers.history.object);
     video.timers.history.object = setInterval(() => {
-      video.saveHistory();
+      if (
+        typeof player === "undefined" ||
+        player.state !== player.states.PLAYING ||
+        player.playhead
+      ) {
+        return;
+      }
+      var curSec = Math.floor(player.getPlayed());
+      if (curSec > 0) {
+        video.saveHistory();
+      }
     }, video.timers.history.duration);
   },
 
   saveHistory: function (time) {
+    if (!video.episode) return;
+    var hasExplicitTime = typeof time === "number" && !isNaN(time);
+    var playheadSec = hasExplicitTime
+      ? Math.max(0, Math.floor(time))
+      : Math.floor(player.getPlayed());
+    if (!hasExplicitTime && playheadSec === video._lastSavedPlayheadSec) {
+      return;
+    }
+    video._lastSavedPlayheadSec = playheadSec;
     service.setHistory({
       data: {
         content_id: video.episode,
-        playhead: time || Math.floor(player.getPlayed()),
+        playhead: playheadSec,
       },
       success: function () {},
       error: function (error) {

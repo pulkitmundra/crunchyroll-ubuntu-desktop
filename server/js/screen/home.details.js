@@ -41,34 +41,74 @@ window.home_details = {
       }
     }
 
-    // Fetch live seriesInfo so star rating, Sub/Dub, maturity, and episode counts are always shown
+    // Fetch live seriesInfo so star rating, Sub/Dub, maturity,episode counts, and series backdrop/synopsis are always shown
     if (item && item.id && typeof service.seriesInfo === "function") {
       service.seriesInfo({
         data: { id: item.id },
         success: function (res) {
           if (res && res.data && res.data[0] && typeof mapper !== "undefined") {
-            var enriched = mapper.extractMeta(res.data[0]);
-            Object.keys(enriched).forEach(function (k) {
-              var val = enriched[k];
-              if (Array.isArray(val)) {
-                if (val.length > 0) item[k] = val;
-              } else if (val !== null && val !== undefined && val !== "" && val !== 0) {
-                item[k] = val;
+            var doc = res.data[0];
+            if (
+              typeof mapper._extractCmsSeriesEntry === "function" &&
+              typeof mapper._applyCmsEntryToItem === "function"
+            ) {
+              var entry = mapper._extractCmsSeriesEntry(doc);
+              if (entry && entry.id) {
+                if (mapper._seriesMetaCache) {
+                  mapper._seriesMetaCache.set(entry.id, entry);
+                }
+                mapper._applyCmsEntryToItem(item, entry);
               }
-            });
+            } else {
+              var enriched = mapper.extractMeta(doc);
+              Object.keys(enriched).forEach(function (k) {
+                var val = enriched[k];
+                if (Array.isArray(val)) {
+                  if (val.length > 0) item[k] = val;
+                } else if (
+                  val !== null &&
+                  val !== undefined &&
+                  val !== "" &&
+                  val !== 0
+                ) {
+                  item[k] = val;
+                }
+              });
+            }
             if (typeof mapper.applyCachedAiringInfo === "function") {
               mapper.applyCachedAiringInfo(item);
             }
-            var mRow = document.getElementById("hero-meta-row");
             if (
-              mRow &&
               home_details.data &&
               home_details.data.this &&
               home_details.data.this.id === item.id
             ) {
-              mRow.innerHTML = mapper.formatMetaBadges(item);
-              if (typeof mapper.triggerHeroEnrichment === "function") {
-                mapper.triggerHeroEnrichment(item, "hero-meta-row", 0);
+              var mRow = document.getElementById("hero-meta-row");
+              if (mRow) {
+                mRow.innerHTML = mapper.formatMetaBadges(item);
+                if (typeof mapper.triggerHeroEnrichment === "function") {
+                  mapper.triggerHeroEnrichment(item, "hero-meta-row", 0);
+                }
+              }
+              if (item.seriesBackground) {
+                $(`#${home.id} .details .background img`).attr(
+                  "src",
+                  item.seriesBackground
+                );
+              }
+              if (item.seriesDescription) {
+                var descEl = $(`#${home.id} .details .info .description`)[0];
+                if (descEl) {
+                  descEl.innerText = item.seriesDescription;
+                }
+              }
+              if (
+                doc.type === "movie_listing" ||
+                item.seriesType === "movie_listing"
+              ) {
+                $(
+                  `.${home_details.id}.${home_details.id}_buttons a[data-action='episodes']`
+                ).remove();
               }
             }
           }
@@ -79,7 +119,8 @@ window.home_details = {
     service.inWatchList({
       data: item.id,
       success: function (response) {
-        home_details.inWatchList = response.data.length > 0;
+        home_details.inWatchList =
+          Boolean(response && Array.isArray(response.data) && response.data.length > 0);
         if (!home_details.inWatchList) {
           var content = `<i class="fa-regular fa-bookmark"></i>
           <p>${translate.go("home.details.add")}</p>`;
@@ -95,12 +136,19 @@ window.home_details = {
         console.log(error);
       },
     });
+    var isMovieListing =
+      item.type === "movie" ||
+      item.type === "movie_listing" ||
+      item.seriesType === "movie_listing";
+    var initPlayText = isMovieListing
+      ? translate.go("home.banner.play")
+      : translate.go("home.details.play", { season: 1, episode: 1 });
     var buttons = document.createElement("div");
     buttons.className = `${home_details.id} ${home_details.id}_buttons`;
     buttons.innerHTML = `
     <a class="selected" data-action="play">
       <i class="fa-solid fa-play"></i>
-      <p>${translate.go("home.details.play", { season: 1, episode: 1 })}</p>
+      <p>${initPlayText}</p>
       <span></span>
     </a>
     <a id="watchlist-status" data-action="watchlist">
@@ -110,11 +158,15 @@ window.home_details = {
     <a id="manage-lists-btn" data-action="lists">
       <i class="fa-solid fa-folder-plus"></i>
       <p>Manage Lists</p>
-    </a>
+    </a>${
+      isMovieListing
+        ? ""
+        : `
     <a data-action="episodes">
       <i class="fa-solid fa-list"></i>
       <p>${translate.go("home.details.episodes")}</p>
-    </a>`;
+    </a>`
+    }`;
 
     home_details.data.this = item;
     home_details.data.continue = null;
@@ -137,19 +189,26 @@ window.home_details = {
     if (item.type === "movie") {
       home_details.data.continue = item;
       $(`.${home_details.id}.${home_details.id}_buttons a[data-action='episodes']`).remove();
+      var mvPct =
+        item.duration > 0 ? (item.playhead * 100) / item.duration : 0;
       $(`.${home_details.id}.${home_details.id}_buttons a`)
         .eq(0)
         .addClass(`${item.playhead > 0 ? "played" : ""}`)
-        .attr("percent", (item.playhead * 100) / item.duration);
+        .attr("percent", mvPct);
 
-      var text = translate.go(
-        `home.details.${item.playhead > 0 ? "continue" : "play"}`,
-        { season: 0, episode: 0 }
-      );
-      $(`.${home_details.id}.${home_details.id}_buttons a p`).eq(0).text(text);
+      var text = translate
+        .go(`home.details.${item.playhead > 0 ? "continue" : "play"}`, {
+          season: 0,
+          episode: 0,
+        })
+        .replace(/[:\s-]*S0\s*E0\b/i, "")
+        .trim();
+      $(`.${home_details.id}.${home_details.id}_buttons a p`)
+        .eq(0)
+        .text(text || translate.go("home.banner.play"));
       $(`.${home_details.id}.${home_details.id}_buttons a span`)
         .eq(0)
-        .width((item.playhead * 100) / item.duration + "%");
+        .width(mvPct + "%");
     } else {
       if (showLoader) loading.start();
       service.continue({
@@ -165,28 +224,39 @@ window.home_details = {
           if (!home_details.data.continue.series_id) {
             home_details.data.continue.series_id = item.id;
           }
+          var cont = home_details.data.continue;
+          var isMovieCont =
+            cont.type === "movie" ||
+            item.type === "movie_listing" ||
+            item.seriesType === "movie_listing";
+          if (isMovieCont) {
+            $(
+              `.${home_details.id}.${home_details.id}_buttons a[data-action='episodes']`
+            ).remove();
+          }
           $(`.${home_details.id}.${home_details.id}_buttons a`)
             .eq(0)
-            .addClass(
-              `${home_details.data.continue.played > 0 ? "played" : ""}`
-            )
-            .attr("percent", home_details.data.continue.played);
+            .addClass(`${cont.played > 0 ? "played" : ""}`)
+            .attr("percent", cont.played);
 
           var text = translate.go(
-            `home.details.${
-              home_details.data.continue.played > 0 ? "continue" : "play"
-            }`,
+            `home.details.${cont.played > 0 ? "continue" : "play"}`,
             {
-              season: home_details.data.continue.season_number,
-              episode: home_details.data.continue.episode_number,
+              season: cont.season_number || 0,
+              episode: cont.episode_number || 0,
             }
           );
+          if (isMovieCont) {
+            text =
+              text.replace(/[:\s-]*S0\s*E0\b/i, "").trim() ||
+              translate.go("home.banner.play");
+          }
           $(`.${home_details.id}.${home_details.id}_buttons a p`)
             .eq(0)
             .text(text);
           $(`.${home_details.id}.${home_details.id}_buttons a span`)
             .eq(0)
-            .width(home_details.data.continue.played + "%");
+            .width(cont.played + "%");
         },
         error: function (error) {
           if (showLoader) loading.end();

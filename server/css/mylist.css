@@ -158,10 +158,16 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   text-align: center;
   position: absolute;
   left: 10px;
   border-radius: 6px;
+  transition: bottom 0.18s ease;
+}
+
+#mylist-screen .content .row .row-content .item:hover .poster .progress::after {
+  bottom: 44px;
 }
 
 #mylist-screen .content .row .row-content .item .poster img {
@@ -210,10 +216,11 @@ body:not(.mouse-mode) #mylist-screen .content .row.selected .row-content .slick-
 }
 
 #mylist-screen .content .row .row-content.fixed-error {
-  height: 228px;
-  overflow: hidden;
-  padding: 40px 0;
-  margin-top: -25px;
+  min-height: 150px;
+  height: auto;
+  overflow: visible;
+  padding: 32px 0 28px 0;
+  margin-top: -18px;
   margin-bottom: 0;
 }
 

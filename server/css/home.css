@@ -279,6 +279,7 @@ body {
   font-weight: 700;
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   padding: 3px 8px;
   bottom: 10px;
   min-width: 24px;
@@ -286,6 +287,11 @@ body {
   position: absolute;
   left: 10px;
   border-radius: 6px;
+  transition: bottom 0.18s ease;
+}
+
+#home-screen .content .row .row-content .item:hover .poster.episode .progress::after {
+  bottom: 44px;
 }
 
 #home-screen .content .row .row-content .item .poster img {
@@ -752,6 +758,7 @@ body:not(.mouse-mode) #home-screen .content .row .row-content.selected .slick-sl
 }
 
 .home_episodes-screen.home_episodes-screen_content .episodes .episode {
+  position: relative;
   padding: 12px;
   display: flex;
   align-items: center;
@@ -819,6 +826,7 @@ body:not(.mouse-mode) #home-screen .content .row .row-content.selected .slick-sl
   font-size: 11.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   padding: 3px 9px;
   top: -158px;
   min-width: 24px;
@@ -1180,17 +1188,20 @@ body.compact-window .browse-back {
   left: 8px;
   right: 8px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   z-index: 3;
   pointer-events: none;
 }
 
 .cr-card-badges-right {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   margin-left: auto;
 }
 
@@ -1206,8 +1217,28 @@ body.compact-window .browse-back {
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
+  white-space: nowrap;
   backdrop-filter: blur(6px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+
+#home-screen .poster.serie .cr-card-badges,
+#search-screen .search-poster-wrap .cr-card-badges {
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  gap: 3px 4px;
+}
+
+#home-screen .poster.serie .cr-card-rating,
+#home-screen .poster.serie .cr-card-subdub,
+#home-screen .poster.serie .cr-card-ongoing,
+#search-screen .search-poster-wrap .cr-card-rating,
+#search-screen .search-poster-wrap .cr-card-subdub,
+#search-screen .search-poster-wrap .cr-card-ongoing {
+  padding: 2px 5px;
+  font-size: 9.5px;
+  gap: 3px;
 }
 
 .cr-card-rating {
@@ -1269,21 +1300,23 @@ body.compact-window .browse-back {
   opacity: 1;
 }
 
-/* Episode card Sub | Dub pill */
+/* Episode card Sub | Dub inline pill */
 .ep-subdub-badge {
-  position: absolute;
-  right: 10px;
-  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 8px;
   background: rgba(14, 14, 18, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: #fff;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 3px 8px;
+  line-height: 1.2;
+  white-space: nowrap;
+  padding: 2px 7px;
   border-radius: 5px;
-  z-index: 2;
 }
 
 /* ================================================================
@@ -1563,9 +1596,9 @@ body.compact-window .browse-back {
 /* My List card hover quick-remove button */
 #mylist-screen .row-content .item .mylist-quick-remove {
   position: absolute;
-  bottom: 36px;
+  bottom: 44px;
   right: 8px;
-  z-index: 4;
+  z-index: 5;
   width: 30px;
   height: 30px;
   border-radius: 8px;

@@ -1148,16 +1148,38 @@ function setupMouseSupport() {
     );
   }
 
+  var lastDragSeekAt = 0;
+  var pendingDragClientX = null;
+
   // Allow clicking and dragging along the video progress bar to scrub smoothly
-  function seekAtClientX(barEl, clientX) {
+  function seekAtClientX(barEl, clientX, forceCommit) {
     if (!barEl || typeof player === "undefined" || typeof video === "undefined") return;
     var rect = barEl.getBoundingClientRect();
     if (!rect.width) return;
     var ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     var dur = player.getDuration();
     if (dur && dur > 0) {
-      player.forwardTo(ratio * dur);
-      video.setPlayingTime();
+      var targetSec = Math.min(Math.max(0, dur - 0.5), ratio * dur);
+      var playedEl = document.getElementById("played");
+      if (playedEl) {
+        playedEl.style.width = (targetSec / dur) * 100 + "%";
+      }
+      var timeEl = document.getElementById("time");
+      if (timeEl) {
+        var ts = Math.floor(targetSec % 60);
+        var tm = Math.floor((targetSec % 3600) / 60);
+        var th = Math.floor(targetSec / 3600);
+        var pad2 = function (n) {
+          return n < 10 ? "0" + n : "" + n;
+        };
+        timeEl.innerText = pad2(th) + ":" + pad2(tm) + ":" + pad2(ts);
+      }
+      var now = Date.now();
+      if (forceCommit || now - lastDragSeekAt >= 120) {
+        lastDragSeekAt = now;
+        player.forwardTo(targetSec);
+        video.setPlayingTime();
+      }
       updateProgressHover(barEl, clientX, true);
       video.showOSD();
     }
@@ -1237,8 +1259,9 @@ function setupMouseSupport() {
           video.abortAutoSkip();
         }
         isDraggingProgress = true;
+        pendingDragClientX = e.clientX;
         document.body.classList.add("scrubbing-progress");
-        seekAtClientX(barEl, e.clientX);
+        seekAtClientX(barEl, e.clientX, true);
         e.preventDefault();
       }
     }
@@ -1256,9 +1279,10 @@ function setupMouseSupport() {
     }
 
     if (isDraggingProgress) {
+      pendingDragClientX = e.clientX;
       var barEl = document.querySelector(".osd .progress .bar");
       if (barEl) {
-        seekAtClientX(barEl, e.clientX);
+        seekAtClientX(barEl, e.clientX, false);
       }
       return;
     }
@@ -1401,6 +1425,12 @@ function setupMouseSupport() {
       justFinishedScrubbing = true;
       document.body.classList.remove("scrubbing-progress");
       var barEl = document.querySelector(".osd .progress .bar");
+      var finalX =
+        e && typeof e.clientX === "number" ? e.clientX : pendingDragClientX;
+      if (barEl && typeof finalX === "number") {
+        seekAtClientX(barEl, finalX, true);
+      }
+      pendingDragClientX = null;
       if (barEl && !isPointInProgressHitZone(barEl, e)) {
         updateProgressHover(barEl, 0, false);
       }
@@ -1696,9 +1726,14 @@ function setupMouseSupport() {
           mlItemIdx < mylist.data.lists[mlRowIdx].items.length
         ) {
           var mlDataItem = mylist.data.lists[mlRowIdx].items[mlItemIdx];
-          $("#generic-background").attr("src", mlDataItem.background);
+          $("#generic-background").attr(
+            "src",
+            mlDataItem.seriesBackground || mlDataItem.background
+          );
           $("#generic-title").text(mlDataItem.title);
-          $("#generic-description").text(mlDataItem.description);
+          $("#generic-description").text(
+            mlDataItem.seriesDescription || mlDataItem.description || ""
+          );
           $("#generic-meta-row").html(
             typeof mapper !== "undefined" && mapper.formatMetaBadges
               ? mapper.formatMetaBadges(mlDataItem)
@@ -1744,7 +1779,10 @@ function setupMouseSupport() {
       if (list && list.items && itemIdx >= 0 && itemIdx < list.items.length) {
         var item = list.items[itemIdx];
         home._previewItem = item;
-        $("#home-screen .details .background img").attr("src", item.background);
+        $("#home-screen .details .background img").attr(
+          "src",
+          item.seriesBackground || item.background
+        );
         var titleEl = $("#home-screen .details .info .title")[0];
         if (titleEl) {
           titleEl.innerText = item.title;
@@ -1762,7 +1800,7 @@ function setupMouseSupport() {
         }
         var descEl = $("#home-screen .details .info .description")[0];
         if (descEl) {
-          descEl.innerText = item.description;
+          descEl.innerText = item.seriesDescription || item.description || "";
         }
       }
     }, 80);
@@ -1965,8 +2003,11 @@ function setupMouseSupport() {
               if (typeof home.setRowLoading === "function") {
                 home.setRowLoading(rIdx, true);
               }
+              var wheelCatParam = listData.id
+                ? home.data.main.category + "," + listData.id
+                : String(home.data.main.category || "");
               mapper.loadCategoryListAsync(
-                home.data.main.category + "," + listData.id,
+                wheelCatParam,
                 listData.items.length,
                 20,
                 rIdx,
@@ -1984,9 +2025,7 @@ function setupMouseSupport() {
                       return;
                     }
                     var newRaw =
-                      response && Array.isArray(response.items)
-                        ? response.items
-                        : [];
+                      (response && (response.data || response.items)) || [];
                     home.data.main.lists[index].lazy = newRaw.length === 20;
                     home.addToList(index, mapper.mapItems(newRaw));
                   },
@@ -2416,7 +2455,7 @@ function setupMouseSupport() {
 
       var barEl = osdVisible && document.querySelector(".osd .progress .bar");
       if (barEl && isPointInProgressHitZone(barEl, e)) {
-        seekAtClientX(barEl, e.clientX);
+        seekAtClientX(barEl, e.clientX, true);
         return;
       }
       if (osdVisible && target.closest(".osd .progress")) {

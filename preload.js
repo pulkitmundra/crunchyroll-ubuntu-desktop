@@ -11,9 +11,16 @@ contextBridge.exposeInMainWorld("electronUtilsRender", {
   getWindowOpacity: () => ipcRenderer.invoke("getWindowOpacity"),
   captureScreenshot: (meta) => ipcRenderer.invoke("captureScreenshot", meta),
   openExternal: (url) => ipcRenderer.send("openExternal", url),
+  setPlaybackPowerSave: (playing) =>
+    ipcRenderer.invoke("setPlaybackPowerSave", Boolean(playing)),
   onWindowModeChanged: (callback) => {
     if (typeof callback === "function") {
       ipcRenderer.on("windowModeChanged", (_, state) => callback(state));
+    }
+  },
+  onSystemPowerEvent: (callback) => {
+    if (typeof callback === "function") {
+      ipcRenderer.on("systemPowerEvent", (_, eventType) => callback(eventType));
     }
   },
 });

@@ -217,7 +217,7 @@ window.mylist = {
             <div class="content">
               <div class="details full">
                 <div class="background">
-                  <img src="${mylist.escapeHtml(item.background)}">
+                  <img src="${mylist.escapeHtml(item.seriesBackground || item.background)}">
                 </div>
                 <div class="info">
                   <div class="title resize">${mylist.escapeHtml(item.title)}</div>
@@ -226,7 +226,7 @@ window.mylist = {
                       ? mapper.formatMetaBadges(item)
                       : ""
                   }</div>
-                  <div class="description resize">${mylist.escapeHtml(item.description)}</div>
+                  <div class="description resize">${mylist.escapeHtml(item.seriesDescription || item.description)}</div>
                   <div class="buttons">
                     <a class="selected">${translate.go("home.banner.play")}</a>
                     <a>${translate.go("home.banner.info")}</a>
@@ -287,6 +287,29 @@ window.mylist = {
           });
         });
 
+        var finalizeLists = function () {
+          mylist.data.lists.sort(function (a, b) {
+            return a.order - b.order;
+          });
+          var allItems = [];
+          mylist.data.lists.forEach(function (lst) {
+            if (lst && Array.isArray(lst.items)) {
+              allItems.push.apply(allItems, lst.items);
+            }
+          });
+          if (
+            allItems.length > 0 &&
+            typeof mapper !== "undefined" &&
+            typeof mapper.enrichItemsWithSeriesMeta === "function"
+          ) {
+            mapper.enrichItemsWithSeriesMeta(allItems, function () {
+              callback.success();
+            });
+          } else {
+            callback.success();
+          }
+        };
+
         listToFetch.forEach((item) => {
           service[item.method]({
             data: item.data,
@@ -303,20 +326,14 @@ window.mylist = {
               }
 
               if (mylist.data.loadedLists === listToFetch.length) {
-                mylist.data.lists.sort(function (a, b) {
-                  return a.order - b.order;
-                });
-                callback.success();
+                finalizeLists();
               }
             },
             error: function (error) {
               console.log(error);
               mylist.data.loadedLists++;
               if (mylist.data.loadedLists === listToFetch.length) {
-                mylist.data.lists.sort(function (a, b) {
-                  return a.order - b.order;
-                });
-                callback.success();
+                finalizeLists();
               }
             },
           });
@@ -554,7 +571,10 @@ window.mylist = {
       if (!rowEl || !rowEl.slick || !listObj) return;
       var item = listObj.items[rowEl.slick.currentSlide];
       if (!item) return;
-      $(`#${mylist.id} .details .background img`).attr("src", item.background);
+      $(`#${mylist.id} .details .background img`).attr(
+        "src",
+        item.seriesBackground || item.background
+      );
       var title = $(`#${mylist.id} .details .information #generic-title`)[0];
       if (title) {
         title.innerText = item.title;
@@ -562,7 +582,7 @@ window.mylist = {
 
       var description = $(`#${mylist.id} .details .information #generic-description`)[0];
       if (description) {
-        description.innerText = item.description;
+        description.innerText = item.seriesDescription || item.description || "";
       }
 
       var extraEl = $(`#${mylist.id} .details .information .extra-info`)[0];

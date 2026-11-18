@@ -80,9 +80,8 @@ window.session = {
           session.clear();
           return callback && callback.error && callback.error(response);
         }
-        session.storage.expires_in = new Date().setSeconds(
-          new Date().getSeconds() + response.expires_in,
-        );
+        session.storage.expires_in =
+          Date.now() + (Number(response.expires_in) || 300) * 1000;
         session.storage.id = response.account_id;
         session.storage.account.username = username;
         if ("password" in session.storage.account) {
@@ -129,9 +128,8 @@ window.session = {
             });
             return;
           }
-          session.storage.expires_in = new Date().setSeconds(
-            new Date().getSeconds() + response.expires_in,
-          );
+          session.storage.expires_in =
+            Date.now() + (Number(response.expires_in) || 300) * 1000;
           session.storage.id = response.account_id;
           if (response.profile_id) {
             session.storage.profile_id = response.profile_id;
@@ -172,17 +170,29 @@ window.session = {
           session._fetchingCookies = false;
           var queue = session._cookiesQueue.slice();
           session._cookiesQueue = [];
-          if (response && response.cms) {
-            session.storage.cookies.bucket = response.cms.bucket;
-            session.storage.account.premium =
-              session.storage.cookies.bucket.includes("crunchyroll");
-            session.storage.cookies.policy = response.cms.policy;
-            session.storage.cookies.signature = response.cms.signature;
-            session.storage.cookies.key_pair_id = response.cms.key_pair_id;
-            session.storage.cookies.expires = new Date(
-              response.cms.expires,
-            ).getTime();
+          if (
+            !response ||
+            !response.cms ||
+            typeof response.cms.bucket !== "string" ||
+            !response.cms.policy ||
+            !response.cms.signature ||
+            !response.cms.key_pair_id
+          ) {
+            var err = response || new Error("Invalid CMS cookie response");
+            queue.forEach(function (cb) {
+              cb && cb.error && cb.error(err);
+            });
+            return;
           }
+          session.storage.cookies.bucket = response.cms.bucket;
+          session.storage.account.premium =
+            session.storage.cookies.bucket.includes("crunchyroll");
+          session.storage.cookies.policy = response.cms.policy;
+          session.storage.cookies.signature = response.cms.signature;
+          session.storage.cookies.key_pair_id = response.cms.key_pair_id;
+          session.storage.cookies.expires = new Date(
+            response.cms.expires,
+          ).getTime();
 
           var updated = session.update();
           queue.forEach(function (cb) {
@@ -257,16 +267,22 @@ window.session = {
           if (!json || !json.access_token) {
             return callback && callback.error && callback.error(json);
           }
-          session.storage.expires_in = new Date().setSeconds(
-            new Date().getSeconds() + json.expires_in,
-          );
+          session.storage.expires_in =
+            Date.now() + (Number(json.expires_in) || 300) * 1000;
           session.storage.id = json.account_id;
           session.storage.profile_id = json.profile_id;
           session.storage.country = json.country;
           session.storage.token_type = json.token_type;
           session.storage.access_token = json.access_token;
           session.storage.refresh_token = json.refresh_token;
+          if (session.storage.cookies) {
+            session.storage.cookies.expires = 0;
+          }
           session.update();
+          session.cookies({
+            success: function () {},
+            error: function () {},
+          });
 
           // refresh profiles to set correct is_selected status
           service.profiles({
@@ -309,9 +325,11 @@ window.session = {
 
   isExpired: function (coockie_type) {
     var expire_date = coockie_type
-      ? session.storage.cookies.expires
-      : session.storage.expires_in;
-    return !(expire_date && expire_date >= new Date().getTime());
+      ? session.storage &&
+        session.storage.cookies &&
+        session.storage.cookies.expires
+      : session.storage && session.storage.expires_in;
+    return !(expire_date && expire_date - 60000 >= Date.now());
   },
 
   update: function () {

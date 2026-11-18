@@ -1,10 +1,15 @@
 window.historyScreen = {
   id: "history-screen",
   data: [],
+  _reqId: 0,
 
   init: function () {
+    historyScreen._reqId++;
+    $("[id='history-screen']").remove();
+    historyScreen.data = [];
     var history_element = document.createElement("div");
     history_element.id = historyScreen.id;
+    main.state = historyScreen.id;
 
     history_element.innerHTML = `
     <div class="content">
@@ -32,59 +37,81 @@ window.historyScreen = {
   },
 
   loadHistory: function () {
+    var reqId = ++historyScreen._reqId;
     loading.start();
     service.history({
       success: function (response) {
-        var elements = "";
+        if (reqId !== historyScreen._reqId || !document.getElementById(historyScreen.id)) {
+          loading.end();
+          return;
+        }
         historyScreen.data = mapper.history(response);
-        var listEl = document.getElementById("history-list");
-        var clearBtn = document.getElementById("history-clear-all-btn");
-        if (!listEl) {
-          loading.end();
-          return;
-        }
-        if (!historyScreen.data || historyScreen.data.length === 0) {
-          listEl.innerHTML = `<div class="history-empty">No watch history yet.</div>`;
-          if (clearBtn) clearBtn.style.display = "none";
-          loading.end();
-          return;
-        }
-        if (clearBtn) clearBtn.style.display = "inline-flex";
-        var esc =
-          typeof mapper !== "undefined" && mapper.escapeHtml
-            ? mapper.escapeHtml
-            : function (s) {
-                return String(s == null ? "" : s);
-              };
-        historyScreen.data.forEach((element, index) => {
-          var badges =
-            typeof mapper !== "undefined" && mapper.formatCardBadges
-              ? mapper.formatCardBadges(element)
+        var renderHistoryCards = function () {
+          if (reqId !== historyScreen._reqId) {
+            loading.end();
+            return;
+          }
+          var elements = "";
+          var listEl = document.getElementById("history-list");
+          var clearBtn = document.getElementById("history-clear-all-btn");
+          if (!listEl) {
+            loading.end();
+            return;
+          }
+          if (!historyScreen.data || historyScreen.data.length === 0) {
+            listEl.innerHTML = `<div class="history-empty">No watch history yet.</div>`;
+            if (clearBtn) clearBtn.style.display = "none";
+            loading.end();
+            return;
+          }
+          if (clearBtn) clearBtn.style.display = "inline-flex";
+          var esc =
+            typeof mapper !== "undefined" && mapper.escapeHtml
+              ? mapper.escapeHtml
+              : function (s) {
+                  return String(s == null ? "" : s);
+                };
+          historyScreen.data.forEach((element, index) => {
+            var badges =
+              typeof mapper !== "undefined" && mapper.formatCardBadges
+                ? mapper.formatCardBadges(element)
+                : "";
+            var epNum = element.episode || element.episode_number || "";
+            var epTitle = element.episode_title || "";
+            var epMeta = epNum ? `E${epNum}${epTitle ? " - " + epTitle : ""}` : epTitle;
+            var safeContentId = esc(element.content_id || "");
+            var safeLabel = esc(
+              (element.title || "Episode") + (epNum ? " E" + epNum : "")
+            );
+            var removeBtn = safeContentId
+              ? `<button type="button" class="history-quick-remove" data-content-id="${safeContentId}" data-label="${safeLabel}" title="Remove from Watch History"><i class="fa-solid fa-trash-can"></i></button>`
               : "";
-          var epNum = element.episode || element.episode_number || "";
-          var epTitle = element.episode_title || "";
-          var epMeta = epNum ? `E${epNum}${epTitle ? " - " + epTitle : ""}` : epTitle;
-          var safeContentId = esc(element.content_id || "");
-          var safeLabel = esc(
-            (element.title || "Episode") + (epNum ? " E" + epNum : "")
-          );
-          var removeBtn = safeContentId
-            ? `<button type="button" class="history-quick-remove" data-content-id="${safeContentId}" data-label="${safeLabel}" title="Remove from Watch History"><i class="fa-solid fa-trash-can"></i></button>`
-            : "";
-          elements += `
-          <div class="item${index === 0 ? " selected" : ""}">
-            <img src="${esc(element.background)}" alt="">
-            ${badges}
-            ${removeBtn}
-            <div class="history-card-info">
-              <div class="history-series-title">${esc(element.title || "")}</div>
-              ${epMeta ? `<div class="history-ep-title">${esc(epMeta)}</div>` : ""}
-            </div>
-            ${historyScreen.view(element)}
-          </div>`;
-        });
-        listEl.innerHTML = elements;
-        loading.end();
+            elements += `
+            <div class="item${index === 0 ? " selected" : ""}">
+              <img src="${esc(element.background)}" alt="">
+              ${badges}
+              ${removeBtn}
+              <div class="history-card-info">
+                <div class="history-series-title">${esc(element.title || "")}</div>
+                ${epMeta ? `<div class="history-ep-title">${esc(epMeta)}</div>` : ""}
+              </div>
+              ${historyScreen.view(element)}
+            </div>`;
+          });
+          listEl.innerHTML = elements;
+          loading.end();
+        };
+
+        if (
+          historyScreen.data &&
+          historyScreen.data.length > 0 &&
+          typeof mapper !== "undefined" &&
+          typeof mapper.enrichItemsWithSeriesMeta === "function"
+        ) {
+          mapper.enrichItemsWithSeriesMeta(historyScreen.data, renderHistoryCards);
+        } else {
+          renderHistoryCards();
+        }
       },
       error: function (error) {
         loading.end();
@@ -155,6 +182,7 @@ window.historyScreen = {
   },
 
   destroy: function () {
+    historyScreen._reqId++;
     if (typeof window.closeConfirmDialog === "function") {
       window.closeConfirmDialog();
     }
@@ -165,7 +193,7 @@ window.historyScreen = {
   view: function (item) {
     if (!item.playhead || !item.duration) return "";
     var pct = Math.min(100, Math.max(0, (item.playhead * 100) / item.duration));
-    var remMin = Math.max(1, item.duration - item.playhead);
+    var remMin = Math.max(1, Math.round(item.duration - item.playhead));
     return `<div class="progress" style="width: ${pct}%" value="${
       item.playhead >= item.duration
         ? translate.go("home.episodes.watched")
@@ -261,7 +289,7 @@ window.historyScreen = {
             <div class="content">
               <div class="details full">
                 <div class="background">
-                  <img src="${esc(item.background)}">
+                  <img src="${esc(item.seriesBackground || item.background)}">
                 </div>
                 <div class="info">
                   <div class="title resize">${esc(item.title)}</div>
@@ -270,7 +298,7 @@ window.historyScreen = {
                       ? mapper.formatMetaBadges(item)
                       : ""
                   }</div>
-                  <div class="description resize">${esc(item.description)}</div>
+                  <div class="description resize">${esc(item.seriesDescription || item.description)}</div>
                   <div class="buttons">
                     <a class="selected">${translate.go('home.banner.play')}</a>
                     <a>${translate.go('home.banner.info')}</a>
